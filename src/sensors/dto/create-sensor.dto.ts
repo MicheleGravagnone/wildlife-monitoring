@@ -1,12 +1,9 @@
-import { IsString, IsUUID, IsNumber, MinLength, IsISO8601 } from 'class-validator';
-import type { UUID } from 'crypto';
+import { IsString, IsUUID, IsNumber, MinLength, IsISO8601, Min, Max } from 'class-validator';
 
 export class CreateSensorDto {
 
-    @IsUUID()
-    public readonly id: UUID;
-
     @IsString()
+    @MinLength(1)
     public readonly deviceId: string;
 
     @IsString()
@@ -18,9 +15,13 @@ export class CreateSensorDto {
     public readonly parkName: string;
 
     @IsNumber()
+    @Min(-90)
+    @Max(90)
     public readonly latitude: number;
 
     @IsNumber()
+    @Min(-180)
+    @Max(180)
     public readonly longitude: number;
 
     @IsISO8601()
