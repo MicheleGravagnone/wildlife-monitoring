@@ -1,132 +1,86 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Wildlife Monitoring - Backend
+This is the backend for the Wildlife Monitoring project - Research Based Workshop AY 2026/27.
+This section of the project revolves around developing a REST API that receives wildlife detections captured by ESP32s with camera modules and PIR sensors in parks in the voivodeship of Łódź (Poland), classified by a Cloud AI inference system and serves them to the frontend.
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Access and immutability
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+- Visitors can view a public map of detections without logging in.
+- Logged-in users can view additional detection and sensor information. Login grants read access only as there are no editor or administrator permissions to change data.
+- Sensors and detections are immutable after creation. No API client, including the ingestion service, can update or delete existing records.
+- Creation endpoints are reserved for trusted ingestion/provisioning services using separate service credentials. A user login never grants access to these endpoints.
 
-## Description
+## Data conventions
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- IDs are UUIDs. Timestamps use ISO 8601 in UTC.
+- Coordinates use WGS84 decimal degrees: latitude from -90 to 90 and longitude from -180 to 180.
+- `null` means a value is unavailable. Optional input fields are stored as `null` when omitted.
+- Creation requests reject unknown fields. Server-generated fields cannot be supplied by clients.
 
-## Project setup
+## Data models
 
-```bash
-$ npm install
-```
+### Sensor
 
-## Compile and run the project
+A Sensor represents one fixed deployment of a camera and PIR-equipped ESP32. Moving a physical device creates a new Sensor record, preserving the location associated with historical detections. `deviceId` can therefore appear in multiple deployment records.
 
-```bash
-# development
-$ npm run start
+| Field | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `id` | UUID | Generated | Deployment identifier. |
+| `deviceId` | string | Yes | Stable identifier of the physical ESP32; not an authentication secret. |
+| `name` | string | Yes | Human-readable deployment name. |
+| `parkName` | string | Yes | Park containing this deployment. |
+| `latitude` | number | Yes | Deployment latitude. |
+| `longitude` | number | Yes | Deployment longitude. |
+| `installedAt` | timestamp | Yes | When this deployment was installed. |
+| `createdAt` | timestamp | Generated | When the backend registered the deployment. |
 
-# watch mode
-$ npm run start:dev
+All Sensor fields require user authentication to read. Public map coordinates are returned through Detection responses.
 
-# production mode
-$ npm run start:prod
-```
+Mutable values such as battery level, connectivity, or last-seen time are not Sensor fields.
 
-## Run tests
+### Detection
 
-```bash
-# unit tests
-$ npm run test
+A Detection represents one classified capture event from one Sensor deployment. The initial model assumes one primary classification per capture, rather than one record per animal or bounding box.
 
-# e2e tests
-$ npm run test:e2e
+| Field | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `id` | UUID | Generated | Detection identifier. |
+| `eventId` | UUID | Yes | Capture event identifier generated before upload and reused across retries; globally unique. |
+| `sensorId` | UUID | Yes | Reference to an existing Sensor deployment. |
+| `capturedAt` | timestamp | Yes | When the ESP32 captured the image, rather than when it uploaded it. |
+| `classificationStatus` | enum | Yes | `identified`, `unknown`, or `no_animal`. Failed inference requests are not stored as classified detections. |
+| `speciesLabel` | string or null | Conditional | Classifier's species label; required for `identified`, otherwise `null`. |
+| `confidence` | number or null | Conditional | Model score from 0 to 1 for the species label; required for `identified`, otherwise `null`. Not a calibrated probability unless the model guarantees that. |
+| `imageKey` | string or null | No | Private object-storage key for the captured image; not image bytes or a permanent public URL. |
+| `modelVersion` | string | Yes | Exact inference model version used to classify the capture. |
+| `classifiedAt` | timestamp | Yes | When inference completed. |
+| `createdAt` | timestamp | Generated | When the backend stored the detection. |
 
-# test coverage
-$ npm run test:cov
-```
+Rules:
 
-## Deployment
+- `sensorId` must reference a registered deployment, and `capturedAt` must not precede its `installedAt`.
+- `classifiedAt` must not precede `capturedAt`. Delayed uploads are accepted; capture time and receipt time remain distinct.
+- Retrying the same `eventId` with the same input returns the existing record. Reusing it with different input returns `409 Conflict` and never modifies the record.
+- Classification results cannot be corrected in place or replaced by uploading the same event again.
+- Images, when available, are retrieved through an authenticated endpoint that resolves `imageKey` to a short-lived URL. Storage keys and service credentials are never exposed in public responses.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Response views
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Public detection responses contain only `id`, `capturedAt`, `speciesLabel`, and deployment `latitude`/`longitude` resolved from the referenced Sensor. Only `identified` detections appear in the public map and public detection endpoints.
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+Authenticated detection responses include all Detection fields except `imageKey`, plus the deployment location and park name. Authenticated users can also retrieve Sensor details and an image URL when an image exists. They can read `unknown` and `no_animal` records for additional context.
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### User identity
 
-## Observability
+User identity is separate from wildlife observations. A session needs a stable user ID and a valid authentication state; no modification role is required. The authentication provider, login flow, and whether accounts are provisioned or self-registered remain to be selected. If a local User table is needed, its minimum fields are `id` (UUID), `authSubject` (unique provider identity), and `createdAt` (UTC timestamp). Passwords and session tokens do not belong in Sensor or Detection records.
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+## API endpoints
+The API will expose the following endpoints:
+- `GET /api/sensors`: lists Sensor deployments; user authentication required.
+- `GET /api/sensors/:id`: returns a Sensor deployment; user authentication required.
+- `GET /api/detections`: lists detections using the public or authenticated response view, depending on the caller's session.
+- `GET /api/detections/:id`: returns a detection using the appropriate response view. Records excluded from the public view return `404` to unauthenticated callers.
+- `GET /api/detections/:id/image`: returns a short-lived image URL; user authentication required. Returns `404` if no image is available.
+- `POST /api/sensors`: registers a new immutable deployment; provisioning service credentials required.
+- `POST /api/detections`: creates an immutable classified capture event; ingestion service credentials required.
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project, run this and approve the code it prints at [observe.nestjs.com/link](https://observe.nestjs.com/link) - signing up for free if you have no account:
-
-```bash
-$ npx @nestjs/observe link
-```
-
-It installs `@nestjs/observe`, wires it into `AppModule` and `main.ts`, and writes the app key and secret into `.env`, which every `nest start` script (`start`, `start:dev`, `start:debug`) then loads. In production, set `OBSERVE_APP_KEY` and `OBSERVE_APP_SECRET` in the environment instead.
-
-Or do it by hand:
-
-```bash
-$ npm install @nestjs/observe
-```
-
-Then follow the [setup guide](https://docs.nestjs.com/observability/sdk) - it takes a single import and an app key.
-
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+There are no `PUT`, `PATCH`, or `DELETE` endpoints for sensors or detections.
