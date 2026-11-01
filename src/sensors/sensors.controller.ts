@@ -1,4 +1,6 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get, Post, ValidationPipe } from '@nestjs/common';
 
 @Controller('sensors')
-export class SensorsController {}
+export class SensorsController {
+    
+}
