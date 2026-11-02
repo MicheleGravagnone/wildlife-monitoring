@@ -1,10 +1,5 @@
 import { UUID } from "node:crypto"
-
-export enum ClassificationStatus {
-    IDENTIFIED  = 'identified',
-    UNKNOWN = 'unknown',
-    NO_ANIMAL = 'no animal',
-}
+import { ClassificationStatus } from "../enums/classification-status.enum.js";
 
 export type Detection = Readonly<{
     id: UUID;
