@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DetectionsService } from './detections.service.js';
 import type { Detection } from './types/detection.type.js';
 import { ClassificationStatus } from './enums/classification-status.enum.js';
+import { SensorsController } from '../sensors/sensors.controller.js';
+import { CreateDetectionDto } from './dto/create-detection.dto.js';
 
 const expectedDetections: Array<Detection> = [
   {
@@ -52,8 +54,54 @@ describe('DetectionsService', () => {
     expect(service.getOne(sensor.id)).toEqual(sensor);
   });
 
-  it('should return undefined for unknown id', () => {
-    return;
+  it('should return undefined for an unknown id', () => {
+    expect(service.getOne('00000000-1111-1111-2121-01010101')).toBeUndefined();
+  });
+
+  it('should protect stores detection from changes to the returned list', () => {
+    const sensors = service.getAll();
+    Object.assign(sensors[0], { name: 'Changed name' });
+    sensors.pop();
+
+    expect(service.getAll()).toEqual(expectedDetections);
+  });
+
+  it('should protect a stored detection from changes to a lookup result', () => {
+    const sensor = service.getOne(expectedDetections[0].id);
+    expect(sensor).toBeDefined();
+    Object.assign(sensor!, { name: 'Changed name' });
+
+    expect(service.getOne(expectedDetections[0].id)).toEqual(expectedDetections[0]);
+  });
+
+  it('should create a new sensor', () => {
+    const now = new Date('2026-11-03T10:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+
+    const createDetectionDto: CreateDetectionDto = {
+      eventId: 'aaabbaaa-abba-4aaa-8aaa-bbaaaaaaaaa1',
+      sensorId: 'cccccccc-eeee-4bbb-7ggg-bbbbblkbbbb2',
+      capturedAt: '2026-11-01T06:15:00.000Z',
+      classificationStatus: ClassificationStatus.IDENTIFIED,
+      speciesLabel: 'Wild squirrel',
+      confidence: 0.98,
+      imageKey: 'detections/test/wild-squirrel.jpg',
+      modelVersion: 'test-v1',
+      classifiedAt: '2026-12-01T06:15:02.000Z',
+    }
+
+    const result = service.create(createDetectionDto);
+    expect(result).toEqual({
+      ...createDetectionDto,
+      id: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      ),
+      createdAt: now.toISOString(),
+    });
+    expect(expectedDetections.map((sensor) => sensor.id)).not.toContain(result.id);
+    expect(service.getAll()).toEqual([...expectedDetections, result]);
+    expect(service.getOne(result.id)).toEqual(result);
   });
 
 });
