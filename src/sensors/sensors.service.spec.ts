@@ -43,7 +43,6 @@ describe('SensorsService', () => {
 
   it('should return all sensors', () => {
     const result = service.getAll();
-
     expect(result).toEqual(expectedSensors);
   });
 
@@ -97,5 +96,5 @@ describe('SensorsService', () => {
     expect(service.getAll()).toEqual([...expectedSensors, result]);
     expect(service.getOne(result.id)).toEqual(result);
   });
-  
+
 });
