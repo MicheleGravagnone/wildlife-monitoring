@@ -65,7 +65,8 @@ describe('SensorsService', () => {
   it('should protect a stored sensor from changes to a lookup result', () => {
     const sensor = service.getOne(expectedSensors[0].id);
     expect(sensor).toBeDefined();
-    Object.assign(sensor!, { name: 'Changed name' });
+    if (!sensor) throw new Error('Expected seeded sensor');
+    Object.assign(sensor, { name: 'Changed name' });
 
     expect(service.getOne(expectedSensors[0].id)).toEqual(expectedSensors[0]);
   });
@@ -96,5 +97,5 @@ describe('SensorsService', () => {
     expect(service.getAll()).toEqual([...expectedSensors, result]);
     expect(service.getOne(result.id)).toEqual(result);
   });
-
+  
 });

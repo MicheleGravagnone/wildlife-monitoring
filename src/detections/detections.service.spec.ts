@@ -2,8 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DetectionsService } from './detections.service.js';
 import type { Detection } from './types/detection.type.js';
 import { ClassificationStatus } from './enums/classification-status.enum.js';
-import { SensorsController } from '../sensors/sensors.controller.js';
-import { CreateDetectionDto } from './dto/create-detection.dto.js';
+import type { CreateDetectionDto } from './dto/create-detection.dto.js';
 
 const expectedDetections: Array<Detection> = [
   {
@@ -31,7 +30,33 @@ const expectedDetections: Array<Detection> = [
     modelVersion: 'test-v1',
     classifiedAt: '2026-11-01T06:15:02.000Z',
     createdAt: '2026-11-01T06:15:03.000Z',
-  }
+  },
+  {
+    id: '33333333-3333-4333-8333-333333333333',
+    eventId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3',
+    sensorId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1',
+    capturedAt: '2026-11-01T18:45:00.000Z',
+    classificationStatus: ClassificationStatus.UNKNOWN,
+    speciesLabel: null,
+    confidence: null,
+    imageKey: 'detections/test/unknown.jpg',
+    modelVersion: 'test-v1',
+    classifiedAt: '2026-11-01T18:45:02.000Z',
+    createdAt: '2026-11-01T18:45:03.000Z',
+  },
+  {
+    id: '44444444-4444-4444-8444-444444444444',
+    eventId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4',
+    sensorId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2',
+    capturedAt: '2026-11-01T19:10:00.000Z',
+    classificationStatus: ClassificationStatus.NO_ANIMAL,
+    speciesLabel: null,
+    confidence: 0.99,
+    imageKey: null,
+    modelVersion: 'test-v1',
+    classifiedAt: '2026-11-01T19:10:02.000Z',
+    createdAt: '2026-11-01T19:10:03.000Z',
+  },
 ];
 
 describe('DetectionsService', () => {
@@ -45,22 +70,26 @@ describe('DetectionsService', () => {
     service = module.get<DetectionsService>(DetectionsService);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('should return all detections', () => {
     const result = service.getAll();
     expect(result).toEqual(expectedDetections);
   });
 
-  it.each(expectedDetections)('should return sensor $deviceId', (sensor) => {
+  it.each(expectedDetections)('should return detection $id', (sensor) => {
     expect(service.getOne(sensor.id)).toEqual(sensor);
   });
 
   it('should return undefined for an unknown id', () => {
-    expect(service.getOne('00000000-1111-1111-2121-01010101')).toBeUndefined();
+    expect(service.getOne('00000000-0000-4000-8000-000000000000')).toBeUndefined();
   });
 
-  it('should protect stores detection from changes to the returned list', () => {
+  it('should protect stored detections from changes to the returned list', () => {
     const sensors = service.getAll();
-    Object.assign(sensors[0], { name: 'Changed name' });
+    Object.assign(sensors[0], { speciesLabel: 'Changed species' });
     sensors.pop();
 
     expect(service.getAll()).toEqual(expectedDetections);
@@ -69,27 +98,28 @@ describe('DetectionsService', () => {
   it('should protect a stored detection from changes to a lookup result', () => {
     const sensor = service.getOne(expectedDetections[0].id);
     expect(sensor).toBeDefined();
-    Object.assign(sensor!, { name: 'Changed name' });
+    if (!sensor) throw new Error('Expected seeded detection');
+    Object.assign(sensor, { speciesLabel: 'Changed species' });
 
     expect(service.getOne(expectedDetections[0].id)).toEqual(expectedDetections[0]);
   });
 
-  it('should create a new sensor', () => {
+  it('should create a new detection', () => {
     const now = new Date('2026-11-03T10:00:00.000Z');
     vi.useFakeTimers();
     vi.setSystemTime(now);
 
     const createDetectionDto: CreateDetectionDto = {
       eventId: 'aaabbaaa-abba-4aaa-8aaa-bbaaaaaaaaa1',
-      sensorId: 'cccccccc-eeee-4bbb-7ggg-bbbbblkbbbb2',
+      sensorId: 'cccccccc-eeee-4bbb-8bbb-bbbbbbbbbbb2',
       capturedAt: '2026-11-01T06:15:00.000Z',
       classificationStatus: ClassificationStatus.IDENTIFIED,
       speciesLabel: 'Wild squirrel',
       confidence: 0.98,
       imageKey: 'detections/test/wild-squirrel.jpg',
       modelVersion: 'test-v1',
-      classifiedAt: '2026-12-01T06:15:02.000Z',
-    }
+      classifiedAt: '2026-11-01T06:15:02.000Z',
+    };
 
     const result = service.create(createDetectionDto);
     expect(result).toEqual({
@@ -103,5 +133,5 @@ describe('DetectionsService', () => {
     expect(service.getAll()).toEqual([...expectedDetections, result]);
     expect(service.getOne(result.id)).toEqual(result);
   });
-
+  
 });
