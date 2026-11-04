@@ -1,0 +1,18 @@
+
+
+@baseUrl = http://localhost:3000
+
+GET {{baseUrl}}/detections
+
+### Get a detection
+GET {{baseUrl}}/detections/1
+
+### Create a detection
+POST {{baseUrl}}/detections
+Content-Type: application/json
+
+{
+	"species": "fox",
+	"location": "north-trail",
+	"detectedAt": "2025-01-01T12:00:00Z"
+}
