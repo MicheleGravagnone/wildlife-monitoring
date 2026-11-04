@@ -1,5 +1,5 @@
 export enum ClassificationStatus {
-    IDENTIFIED  = 'identified',
-    UNKNOWN = 'unknown',
-    NO_ANIMAL = 'no animal',
+  IDENTIFIED = 'identified',
+  UNKNOWN = 'unknown',
+  NO_ANIMAL = 'no animal',
 }

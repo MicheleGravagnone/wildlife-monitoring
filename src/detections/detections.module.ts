@@ -2,8 +2,12 @@ import { Module } from '@nestjs/common';
 import { DetectionsController } from './detections.controller.js';
 import { DetectionsService } from './detections.service.js';
 
+import { DeploymentsModule } from '../deployments/deployments.module.js';
+
 @Module({
+  imports: [DeploymentsModule],
   controllers: [DetectionsController],
-  providers: [DetectionsService]
+  providers: [DetectionsService],
 })
+
 export class DetectionsModule {}

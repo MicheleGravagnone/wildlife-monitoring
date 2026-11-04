@@ -1,9 +1,12 @@
 import { DetectionsController } from './detections.controller.js';
+import { DeploymentsService } from '../deployments/deployments.service.js';
+import { SensorsService } from '../sensors/sensors.service.js';
 import { DetectionsService } from './detections.service.js';
 
-// Use an actual service as a typed fixture source; controller calls use mocks.
 describe('DetectionsController', () => {
-  const detection = new DetectionsService().getAll()[0];
+  const detection = new DetectionsService(
+    new DeploymentsService(new SensorsService()),
+  ).getAll()[0];
   let controller: DetectionsController;
   let service: Pick<DetectionsService, 'getAll' | 'getOne'>;
 

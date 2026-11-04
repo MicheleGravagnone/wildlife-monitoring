@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ClassificationStatus {
+  IDENTIFIED @map("identified")
+  UNKNOWN    @map("unknown")
+  NO_ANIMAL  @map("no_animal")
+}
+
+model Sensor {
+  id          String       @id @default(uuid()) @db.Uuid
+  deviceId    String       @unique
+  name        String
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  deployments Deployment[]
+}
+
+model Deployment {
+  id          String      @id @default(uuid()) @db.Uuid
+  sensorId    String      @db.Uuid
+  name        String
+  parkName    String
+  latitude    Float
+  longitude   Float
+  installedAt DateTime    @db.Timestamptz(3)
+  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
+  sensor      Sensor      @relation(fields: [sensorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  detections  Detection[]
+
+  @@index([sensorId, installedAt])
+}
+
+model Detection {
+  id                   String               @id @default(uuid()) @db.Uuid
+  eventId              String               @unique @db.Uuid
+  deploymentId         String               @db.Uuid
+  capturedAt           DateTime             @db.Timestamptz(3)
+  classificationStatus ClassificationStatus
+  speciesLabel         String?
+  confidence           Float?
+  imageKey             String?
+  modelVersion         String
+  classifiedAt         DateTime             @db.Timestamptz(3)
+  createdAt            DateTime             @default(now()) @db.Timestamptz(3)
+  deployment           Deployment           @relation(fields: [deploymentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([deploymentId, capturedAt])
+  @@index([classificationStatus, capturedAt])
+}

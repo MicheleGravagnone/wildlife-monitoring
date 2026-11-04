@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SensorsService } from './sensors.service.js';
 import type { Sensor } from './types/sensor.type.js';
@@ -7,21 +8,13 @@ const expectedSensors: Sensor[] = [
   {
     id: 'c3d972e5-4886-4c41-8583-529e288bd285',
     deviceId: 'esp32-test-001',
-    name: 'Test deployment 1',
-    parkName: 'Demo park',
-    latitude: 51.7592,
-    longitude: 19.456,
-    installedAt: '2026-10-01T08:00:00.000Z',
+    name: 'Test sensor 1',
     createdAt: '2026-10-01T08:00:00.000Z',
   },
   {
     id: 'f576207b-8d06-497a-97da-f4958a96908d',
     deviceId: 'esp32-test-002',
-    name: 'Test deployment 2',
-    parkName: 'Demo park',
-    latitude: 51.76,
-    longitude: 19.46,
-    installedAt: '2026-10-02T08:00:00.000Z',
+    name: 'Test sensor 2',
     createdAt: '2026-10-02T08:00:00.000Z',
   },
 ];
@@ -51,7 +44,9 @@ describe('SensorsService', () => {
   });
 
   it('should return undefined for an unknown sensor', () => {
-    expect(service.getOne('00000000-0000-4000-8000-000000000000')).toBeUndefined();
+    expect(
+      service.getOne('00000000-0000-4000-8000-000000000000'),
+    ).toBeUndefined();
   });
 
   it('should protect stored sensors from changes to the returned list', () => {
@@ -76,14 +71,10 @@ describe('SensorsService', () => {
     vi.useFakeTimers();
     vi.setSystemTime(now);
 
-    const createSensorDto: CreateSensorDto = {
+    const createSensorDto = {
       deviceId: 'esp-test-003',
-      name: 'Test deployment 3',
-      parkName: 'Demo park 1',
-      latitude: 50.234,
-      longitude: 1.254,
-      installedAt: '2026-10-02T08:00:00.000Z',
-    };
+      name: 'Test sensor 3',
+    } satisfies CreateSensorDto;
 
     const result = service.create(createSensorDto);
     expect(result).toEqual({
@@ -97,5 +88,24 @@ describe('SensorsService', () => {
     expect(service.getAll()).toEqual([...expectedSensors, result]);
     expect(service.getOne(result.id)).toEqual(result);
   });
-  
+
+  it('rejects duplicate physical device IDs without storing a sensor', () => {
+    expect(() =>
+      service.create({
+        deviceId: expectedSensors[0].deviceId,
+        name: 'Duplicate sensor',
+      }),
+    ).toThrow(ConflictException);
+    expect(service.getAll()).toEqual(expectedSensors);
+  });
+
+  it('protects a newly created sensor from changes to its returned object', () => {
+    const result = service.create({
+      deviceId: 'esp32-copy-test',
+      name: 'Copy test',
+    });
+    const expected = { ...result };
+    Object.assign(result, { name: 'Changed name' });
+    expect(service.getOne(result.id)).toEqual(expected);
+  });
 });
