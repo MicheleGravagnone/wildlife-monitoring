@@ -1,11 +1,8 @@
-import { IsString, MinLength } from 'class-validator';
+import { z } from 'zod';
 
-export class CreateSensorDto {
-  @IsString()
-  @MinLength(1)
-  readonly deviceId: string;
+export const createSensorSchema = z.object({
+  deviceId: z.string().min(1).nonoptional(),
+  name: z.string().min(2),
+});
 
-  @IsString()
-  @MinLength(2)
-  readonly name: string;
-}
+export type CreateSensorDto = z.infer<typeof createSensorSchema>;

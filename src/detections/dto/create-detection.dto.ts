@@ -9,34 +9,18 @@ import {
 import type { UUID } from 'node:crypto';
 import { ClassificationStatus } from '../../generated/prisma/client.js';
 import { ValidClassificationConstraint } from '../validators/valid-classification.constraint.js';
+import { z } from 'zod';
 
-export class CreateDetectionDto {
-  @IsUUID()
-  eventId: UUID;
+export const createDetectionSchema = z.object({
+  eventId: z.uuid().min(0),
+  deploymentId: z.uuid().min(0),
+  capturedAt: z.iso.datetime(),
+  classificationStatus: z.enum(ClassificationStatus),
+  speciesLabel: z.string().nullable(),
+  confidence: z.number().nullable(),
+  imageKey: z.string().min(1).optional(),
+  modelVersion: z.string().min(1),
+  classifiedAt: z.iso.datetime(),
+});
 
-  @IsUUID()
-  deploymentId: UUID;
-
-  @IsString()
-  capturedAt: string;
-
-  @IsEnum(ClassificationStatus)
-  @Validate(ValidClassificationConstraint)
-  classificationStatus: ClassificationStatus;
-
-  @Allow()
-  speciesLabel: string | null;
-
-  @Allow()
-  confidence: number | null;
-
-  @IsString()
-  @IsOptional()
-  imageKey?: string | null;
-
-  @IsString()
-  modelVersion: string;
-
-  @IsString()
-  classifiedAt: string;
-}
+export type CreateDetectionDto = z.infer<typeof createDetectionSchema>;

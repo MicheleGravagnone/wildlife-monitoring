@@ -10,7 +10,8 @@ import {
 import type { UUID } from 'node:crypto';
 import type { Sensor } from '../generated/prisma/client.js';
 import { SensorsService } from './sensors.service.js';
-import { CreateSensorDto } from './dto/create-sensor.dto.js';
+import type { CreateSensorDto } from './dto/create-sensor.dto.js';
+import { createSensorSchema } from './dto/create-sensor.dto.js';
 
 @Controller('sensors')
 export class SensorsController {
@@ -31,7 +32,7 @@ export class SensorsController {
   }
 
   @Post()
-  create(@Body() dto: CreateSensorDto): Promise<Sensor> {
+  create(@Body({ schema: createSensorSchema }) dto: CreateSensorDto): Promise<Sensor> {
     return this.sensorService.create(dto);
   }
 }
