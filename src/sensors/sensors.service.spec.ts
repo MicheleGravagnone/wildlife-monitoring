@@ -1,111 +1,57 @@
 import { ConflictException } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
+import { Prisma } from '../generated/prisma/client.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 import { SensorsService } from './sensors.service.js';
-import type { Sensor } from './types/sensor.type.js';
-import type { CreateSensorDto } from './dto/create-sensor.dto.js';
-
-const expectedSensors: Sensor[] = [
-  {
-    id: 'c3d972e5-4886-4c41-8583-529e288bd285',
-    deviceId: 'esp32-test-001',
-    name: 'Test sensor 1',
-    createdAt: '2026-10-01T08:00:00.000Z',
-  },
-  {
-    id: 'f576207b-8d06-497a-97da-f4958a96908d',
-    deviceId: 'esp32-test-002',
-    name: 'Test sensor 2',
-    createdAt: '2026-10-02T08:00:00.000Z',
-  },
-];
+import { sensor, sensorInput, recordId } from '../../test/support/fixtures.js';
 
 describe('SensorsService', () => {
+  const delegate = { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() };
   let service: SensorsService;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [SensorsService],
-    }).compile();
-
-    service = module.get<SensorsService>(SensorsService);
+  beforeEach(() => {
+    vi.resetAllMocks();
+    service = new SensorsService({
+      sensor: delegate,
+    } as unknown as PrismaService);
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
+  it('returns database records', async () => {
+    delegate.findMany.mockResolvedValue([sensor]);
+    await expect(service.getAll()).resolves.toEqual([sensor]);
   });
 
-  it('should return all sensors', () => {
-    const result = service.getAll();
-    expect(result).toEqual(expectedSensors);
-  });
-
-  it.each(expectedSensors)('should return sensor $deviceId', (sensor) => {
-    expect(service.getOne(sensor.id)).toEqual(sensor);
-  });
-
-  it('should return undefined for an unknown sensor', () => {
-    expect(
-      service.getOne('00000000-0000-4000-8000-000000000000'),
-    ).toBeUndefined();
-  });
-
-  it('should protect stored sensors from changes to the returned list', () => {
-    const sensors = service.getAll();
-    Object.assign(sensors[0], { name: 'Changed name' });
-    sensors.pop();
-
-    expect(service.getAll()).toEqual(expectedSensors);
-  });
-
-  it('should protect a stored sensor from changes to a lookup result', () => {
-    const sensor = service.getOne(expectedSensors[0].id);
-    expect(sensor).toBeDefined();
-    if (!sensor) throw new Error('Expected seeded sensor');
-    Object.assign(sensor, { name: 'Changed name' });
-
-    expect(service.getOne(expectedSensors[0].id)).toEqual(expectedSensors[0]);
-  });
-
-  it('should create a new sensor', () => {
-    const now = new Date('2026-11-03T10:00:00.000Z');
-    vi.useFakeTimers();
-    vi.setSystemTime(now);
-
-    const createSensorDto = {
-      deviceId: 'esp-test-003',
-      name: 'Test sensor 3',
-    } satisfies CreateSensorDto;
-
-    const result = service.create(createSensorDto);
-    expect(result).toEqual({
-      ...createSensorDto,
-      id: expect.stringMatching(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-      ),
-      createdAt: now.toISOString(),
+  it('looks up the requested ID and preserves a missing result', async () => {
+    delegate.findUnique.mockResolvedValue(null);
+    await expect(service.getOne(recordId)).resolves.toBeNull();
+    expect(delegate.findUnique).toHaveBeenCalledWith({
+      where: { id: recordId },
     });
-    expect(expectedSensors.map((sensor) => sensor.id)).not.toContain(result.id);
-    expect(service.getAll()).toEqual([...expectedSensors, result]);
-    expect(service.getOne(result.id)).toEqual(result);
   });
 
-  it('rejects duplicate physical device IDs without storing a sensor', () => {
-    expect(() =>
-      service.create({
-        deviceId: expectedSensors[0].deviceId,
-        name: 'Duplicate sensor',
+  it('returns the persisted record including database-generated fields', async () => {
+    delegate.create.mockResolvedValue(sensor);
+    await expect(service.create(sensorInput)).resolves.toEqual(sensor);
+    expect(delegate.create).toHaveBeenCalledWith({ data: sensorInput });
+  });
+
+  it('translates unique constraint violations to HTTP conflicts', async () => {
+    delegate.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint violation', {
+        code: 'P2002',
+        clientVersion: '7.10.1',
       }),
-    ).toThrow(ConflictException);
-    expect(service.getAll()).toEqual(expectedSensors);
+    );
+    await expect(service.create(sensorInput)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
   });
 
-  it('protects a newly created sensor from changes to its returned object', () => {
-    const result = service.create({
-      deviceId: 'esp32-copy-test',
-      name: 'Copy test',
-    });
-    const expected = { ...result };
-    Object.assign(result, { name: 'Changed name' });
-    expect(service.getOne(result.id)).toEqual(expected);
+  it('preserves other database errors', async () => {
+    const error = new Prisma.PrismaClientKnownRequestError(
+      'Database request failed',
+      { code: 'P2003', clientVersion: '7.10.1' },
+    );
+    delegate.create.mockRejectedValue(error);
+    await expect(service.create(sensorInput)).rejects.toBe(error);
   });
 });

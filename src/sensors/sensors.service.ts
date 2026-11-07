@@ -1,6 +1,6 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import type { Sensor } from '../generated/prisma/client.js';
-import { randomUUID, type UUID } from 'node:crypto';
+import type { UUID } from 'node:crypto';
 import type { CreateSensorDto } from './dto/create-sensor.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -13,7 +13,7 @@ export class SensorsService {
     return this.prisma.sensor.findMany();
   }
 
-  getOne(id: UUID): Promise<Sensor | null>  {
+  getOne(id: UUID): Promise<Sensor | null> {
     return this.prisma.sensor.findUnique({ where: { id } });
   }
 
@@ -22,7 +22,7 @@ export class SensorsService {
       return await this.prisma.sensor.create({
         data: {
           deviceId: dto.deviceId,
-          name: dto.name
+          name: dto.name,
         },
       });
     } catch (err) {

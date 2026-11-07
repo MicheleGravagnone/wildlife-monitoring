@@ -1,5 +1,5 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID, type UUID } from 'node:crypto';
+import { ConflictException, Injectable } from '@nestjs/common';
+import type { UUID } from 'node:crypto';
 import type { CreateDeploymentDto } from './dto/create-deployment.dto.js';
 import type { Deployment } from '../generated/prisma/client.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -14,7 +14,7 @@ export class DeploymentsService {
   }
 
   getOne(id: UUID): Promise<Deployment | null> {
-    return this.prisma.deployment.findUnique({ where: { id }});
+    return this.prisma.deployment.findUnique({ where: { id } });
   }
 
   async create(dto: CreateDeploymentDto): Promise<Deployment> {
@@ -26,10 +26,10 @@ export class DeploymentsService {
           parkName: dto.parkName,
           latitude: dto.latitude,
           longitude: dto.longitude,
-          installedAt: dto.installedAt
+          installedAt: dto.installedAt,
         },
       });
-    } catch(err) {
+    } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictException();
       }

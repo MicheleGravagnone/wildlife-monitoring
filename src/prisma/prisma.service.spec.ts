@@ -1,18 +1,21 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from './prisma.service.js';
 
 describe('PrismaService', () => {
-  let service: PrismaService;
+  afterEach(() => vi.unstubAllEnvs());
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [PrismaService],
-    }).compile();
-
-    service = module.get<PrismaService>(PrismaService);
+  it('requires a database URL', () => {
+    vi.stubEnv('DATABASE_URL', '');
+    expect(() => new PrismaService()).toThrow('DATABASE_URL is required');
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  it('connects and disconnects with the application lifecycle', async () => {
+    vi.stubEnv('DATABASE_URL', 'postgresql://test:test@localhost:5432/test');
+    const service = new PrismaService();
+    const connect = vi.spyOn(service, '$connect').mockResolvedValue();
+    const disconnect = vi.spyOn(service, '$disconnect').mockResolvedValue();
+    await service.onModuleInit();
+    await service.onModuleDestroy();
+    expect(connect).toHaveBeenCalledOnce();
+    expect(disconnect).toHaveBeenCalledOnce();
   });
 });

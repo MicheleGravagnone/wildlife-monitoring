@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, NotFoundException, Param, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { DetectionsService } from './detections.service.js';
 import type { Detection } from '../generated/prisma/client.js';
 import type { UUID } from 'node:crypto';
@@ -16,7 +24,7 @@ export class DetectionsController {
   @Get(':id')
   async getOne(@Param('id', new ParseUUIDPipe()) id: UUID): Promise<Detection> {
     const detection = await this.detectionsService.getOne(id);
-    if(detection == null) {
+    if (detection == null) {
       throw new NotFoundException();
     }
     return detection;

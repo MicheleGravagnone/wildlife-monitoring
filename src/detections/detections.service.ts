@@ -1,11 +1,6 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma, type Detection } from '../generated/prisma/client.js';
-import { randomUUID, type UUID } from 'node:crypto';
+import type { UUID } from 'node:crypto';
 import type { CreateDetectionDto } from './dto/create-detection.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -33,11 +28,14 @@ export class DetectionsService {
           confidence: dto.confidence,
           imageKey: dto.imageKey ?? null,
           modelVersion: dto.modelVersion,
-          classifiedAt: dto.classifiedAt
+          classifiedAt: dto.classifiedAt,
         },
       });
-    } catch(err) {
-      if(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
         throw new ConflictException();
       }
       throw err;

@@ -17,18 +17,16 @@ export class SensorsController {
   constructor(private readonly sensorService: SensorsService) {}
 
   @Get()
-  getAll(): Promise<Sensor[]>{
+  getAll(): Promise<Sensor[]> {
     return this.sensorService.getAll();
   }
 
   @Get(':id')
-  async getOne(@Param('id', new ParseUUIDPipe()) id: UUID): Promise<Sensor>{
+  async getOne(@Param('id', new ParseUUIDPipe()) id: UUID): Promise<Sensor> {
     const sensor = await this.sensorService.getOne(id);
-
     if (sensor == null) {
       throw new NotFoundException('Sensor not found');
     }
-
     return sensor;
   }
 

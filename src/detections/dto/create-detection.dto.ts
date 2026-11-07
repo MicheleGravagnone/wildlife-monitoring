@@ -1,4 +1,10 @@
-import { IsEnum, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import type { UUID } from 'node:crypto';
 import { ClassificationStatus } from '../../generated/prisma/client.js';
 

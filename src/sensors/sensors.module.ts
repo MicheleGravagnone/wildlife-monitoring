@@ -7,7 +7,6 @@ import { PrismaModule } from '../prisma/prisma.module.js';
   controllers: [SensorsController],
   providers: [SensorsService],
   exports: [SensorsService],
-  imports: [PrismaModule]
+  imports: [PrismaModule],
 })
-
 export class SensorsModule {}
