@@ -8,7 +8,7 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import type { UUID } from 'node:crypto';
-import type { Sensor } from './types/sensor.type.js';
+import type { Sensor } from '../generated/prisma/client.js';
 import { SensorsService } from './sensors.service.js';
 import { CreateSensorDto } from './dto/create-sensor.dto.js';
 
@@ -17,23 +17,21 @@ export class SensorsController {
   constructor(private readonly sensorService: SensorsService) {}
 
   @Get()
-  getAll(): Array<Sensor> {
+  getAll(): Promise<Sensor[]> {
     return this.sensorService.getAll();
   }
 
   @Get(':id')
-  getOne(@Param('id', new ParseUUIDPipe()) id: UUID): Sensor {
-    const sensor = this.sensorService.getOne(id);
-
-    if (!sensor) {
+  async getOne(@Param('id', new ParseUUIDPipe()) id: UUID): Promise<Sensor> {
+    const sensor = await this.sensorService.getOne(id);
+    if (sensor == null) {
       throw new NotFoundException('Sensor not found');
     }
-
     return sensor;
   }
 
   @Post()
-  create(@Body() createSensorDto: CreateSensorDto): Sensor {
-    return this.sensorService.create(createSensorDto);
+  create(@Body() dto: CreateSensorDto): Promise<Sensor> {
+    return this.sensorService.create(dto);
   }
 }

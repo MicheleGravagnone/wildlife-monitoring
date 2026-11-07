@@ -1,0 +1,27 @@
+# Suggested extension: VSCode REST Client
+@baseUrl = http://localhost:3000
+
+# Replace these UUIDs with IDs returned by creation requests.
+@sensorId = 00000000-0000-4000-8000-000000000000
+@deploymentId = 00000000-0000-4000-8000-000000000000
+
+### Register a sensor (deviceId must be unique)
+POST {{baseUrl}}/sensors
+Content-Type: application/json
+
+{"deviceId":"esp32-example-001","name":"North trail camera"}
+
+### Register an installation
+POST {{baseUrl}}/deployments
+Content-Type: application/json
+
+{"sensorId":"{{sensorId}}","name":"North trail","parkName":"Example park","latitude":51.7592,"longitude":19.456,"installedAt":"2026-11-01T08:00:00Z"}
+
+### Record a classified capture (eventId must be unique)
+POST {{baseUrl}}/detections
+Content-Type: application/json
+
+{"eventId":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1","deploymentId":"{{deploymentId}}","capturedAt":"2026-11-02T08:00:00Z","classificationStatus":"IDENTIFIED","speciesLabel":"Red fox","confidence":0.97,"modelVersion":"example-v1","classifiedAt":"2026-11-02T08:00:02Z"}
+
+### List detections
+GET {{baseUrl}}/detections

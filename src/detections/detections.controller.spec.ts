@@ -1,35 +1,44 @@
+import { NotFoundException } from '@nestjs/common';
 import { DetectionsController } from './detections.controller.js';
-import { DeploymentsService } from '../deployments/deployments.service.js';
-import { SensorsService } from '../sensors/sensors.service.js';
 import { DetectionsService } from './detections.service.js';
+import {
+  detection,
+  detectionInput,
+  recordId,
+} from '../../test/support/fixtures.js';
 
 describe('DetectionsController', () => {
-  const detection = new DetectionsService(
-    new DeploymentsService(new SensorsService()),
-  ).getAll()[0];
   let controller: DetectionsController;
-  let service: Pick<DetectionsService, 'getAll' | 'getOne'>;
+  const service = { getAll: vi.fn(), getOne: vi.fn(), create: vi.fn() };
 
   beforeEach(() => {
-    service = {
-      getAll: vi.fn().mockReturnValue([detection]),
-      getOne: vi.fn().mockReturnValue(detection),
-    };
-    controller = new DetectionsController(service as DetectionsService);
+    vi.resetAllMocks();
+    controller = new DetectionsController(
+      service as unknown as DetectionsService,
+    );
   });
 
-  it('returns the service list', () => {
-    expect(controller.getAll()).toEqual([detection]);
-    expect(service.getAll).toHaveBeenCalledExactlyOnceWith();
+  it('returns the service list', async () => {
+    service.getAll.mockResolvedValue([detection]);
+    await expect(controller.getAll()).resolves.toEqual([detection]);
   });
 
-  it('passes the requested ID to the service', () => {
-    expect(controller.getOne(detection.id)).toEqual(detection);
-    expect(service.getOne).toHaveBeenCalledExactlyOnceWith(detection.id);
+  it('looks up the requested record', async () => {
+    service.getOne.mockResolvedValue(detection);
+    await expect(controller.getOne(recordId)).resolves.toEqual(detection);
+    expect(service.getOne).toHaveBeenCalledExactlyOnceWith(recordId);
   });
 
-  it('returns undefined when the service cannot find a detection', () => {
-    vi.mocked(service.getOne).mockReturnValue(undefined);
-    expect(controller.getOne(detection.id)).toBeUndefined();
+  it('returns 404 for a missing record', async () => {
+    service.getOne.mockResolvedValue(null);
+    await expect(controller.getOne(recordId)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('passes creation input to the service', async () => {
+    service.create.mockResolvedValue(detection);
+    await expect(controller.create(detectionInput)).resolves.toEqual(detection);
+    expect(service.create).toHaveBeenCalledExactlyOnceWith(detectionInput);
   });
 });
