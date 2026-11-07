@@ -10,6 +10,8 @@ async function bootstrap() {
     forbidNonWhitelisted: true
   }));
 
+  app.enableShutdownHooks();
+
   const config = new DocumentBuilder()
     .setTitle('Torb - Wildlife monitoring')
     .setDescription('Wildlife monitoring project for the city of Łódź')

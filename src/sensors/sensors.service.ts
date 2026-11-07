@@ -2,9 +2,12 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import type { Sensor } from './types/sensor.type.js';
 import { randomUUID, type UUID } from 'node:crypto';
 import type { CreateSensorDto } from './dto/create-sensor.dto.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 @Injectable()
 export class SensorsService {
+  constructor(private readonly prisma: PrismaService) {}
+
   private readonly sensors: Sensor[] = [
     {
       id: 'c3d972e5-4886-4c41-8583-529e288bd285',
@@ -20,30 +23,31 @@ export class SensorsService {
     },
   ];
 
-  getAll(): Array<Sensor> {
-    return this.sensors.map((sensor) => ({ ...sensor }));
+  getAll() {
+    return this.prisma.sensor.findMany();
   }
 
-  getOne(id: UUID): Sensor | undefined {
-    const sensor = this.sensors.find((sensor) => sensor.id === id);
-    return sensor ? { ...sensor } : undefined;
+  getOne(id: UUID)  {
+    return this.prisma.sensor.findUnique({ where: { id } });
   }
 
-  create(createSensorDto: CreateSensorDto): Sensor {
-    if (
-      this.sensors.some(
-        (sensor) => sensor.deviceId === createSensorDto.deviceId,
-      )
-    ) {
-      throw new ConflictException('Sensor device ID already registered');
+  async create(dto: CreateSensorDto) {
+    try {
+      return await this.prisma.sensor.create({
+        data: {
+          deviceId: dto.deviceId,
+          name: dto.name
+        },
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        (err as Prisma.PrismaClientKnownRequestError).code === 'P2002'
+      ) {
+        throw new ConflictException();
+      }
+
+      throw err;
     }
-    const sensor = {
-      id: randomUUID(),
-      deviceId: createSensorDto.deviceId,
-      name: createSensorDto.name,
-      createdAt: new Date().toISOString(),
-    };
-    this.sensors.push(sensor);
-    return { ...sensor };
   }
 }

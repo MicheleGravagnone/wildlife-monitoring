@@ -17,15 +17,15 @@ export class SensorsController {
   constructor(private readonly sensorService: SensorsService) {}
 
   @Get()
-  getAll(): Array<Sensor> {
-    return this.sensorService.getAll();
+  async getAll() {
+    return await this.sensorService.getAll();
   }
 
   @Get(':id')
-  getOne(@Param('id', new ParseUUIDPipe()) id: UUID): Sensor {
-    const sensor = this.sensorService.getOne(id);
+  async getOne(@Param('id', new ParseUUIDPipe()) id: UUID) {
+    const sensor = await this.sensorService.getOne(id);
 
-    if (!sensor) {
+    if (sensor == null) {
       throw new NotFoundException('Sensor not found');
     }
 
@@ -33,7 +33,7 @@ export class SensorsController {
   }
 
   @Post()
-  create(@Body() createSensorDto: CreateSensorDto): Sensor {
-    return this.sensorService.create(createSensorDto);
+  async create(@Body() dto: CreateSensorDto) {
+    return await this.sensorService.create(dto);
   }
 }
