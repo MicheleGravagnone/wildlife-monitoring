@@ -1,6 +1,6 @@
-import { IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 import type { UUID } from 'node:crypto';
-import { ClassificationStatus } from '../enums/classification-status.enum.js';
+import { ClassificationStatus } from '../../generated/prisma/client.js';
 
 export class CreateDetectionDto {
   @IsUUID()
@@ -12,10 +12,22 @@ export class CreateDetectionDto {
   @IsString()
   capturedAt: string;
 
+  @IsEnum(ClassificationStatus)
   classificationStatus: ClassificationStatus;
+
+  @IsString()
   speciesLabel: string | null;
+
+  @IsNumber()
   confidence: number | null;
+
+  @IsString()
+  @IsOptional()
   imageKey?: string | null;
+
+  @IsString()
   modelVersion: string;
+
+  @IsString()
   classifiedAt: string;
 }
