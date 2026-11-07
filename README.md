@@ -53,11 +53,12 @@ Unit tests (`*.spec.ts`) live next to their implementation. `test/e2e/` contains
 ```sh
 npm run build
 npm run lint
+npm run typecheck
 npm run format:check
 npm test
 ```
 
-GitHub Actions runs these checks and the database-backed HTTP tests on pushes and pull requests.
+GitHub Actions runs code quality checks and unit tests independently from database-backed HTTP tests. Both jobs have a ten-minute timeout. CI runs on pushes to `main` and `prisma`, on pull requests, and manually; newer runs cancel superseded runs for the same branch or PR.
 
 Unit tests mock database access and require no running database. End-to-end tests require a **separate, migrated test database**:
 

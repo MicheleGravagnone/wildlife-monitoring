@@ -22,7 +22,9 @@ export class DeploymentsController {
   }
 
   @Get(':id')
-  async getOne(@Param('id', new ParseUUIDPipe()) id: UUID): Promise<Deployment> {
+  async getOne(
+    @Param('id', new ParseUUIDPipe()) id: UUID,
+  ): Promise<Deployment> {
     const deployment = await this.deploymentsService.getOne(id);
     if (deployment == null) {
       throw new NotFoundException('Deployment not found');

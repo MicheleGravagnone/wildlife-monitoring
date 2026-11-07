@@ -1,12 +1,14 @@
 import {
+  Allow,
   IsEnum,
-  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Validate,
 } from 'class-validator';
 import type { UUID } from 'node:crypto';
 import { ClassificationStatus } from '../../generated/prisma/client.js';
+import { ValidClassificationConstraint } from '../validators/valid-classification.constraint.js';
 
 export class CreateDetectionDto {
   @IsUUID()
@@ -19,12 +21,13 @@ export class CreateDetectionDto {
   capturedAt: string;
 
   @IsEnum(ClassificationStatus)
+  @Validate(ValidClassificationConstraint)
   classificationStatus: ClassificationStatus;
 
-  @IsString()
+  @Allow()
   speciesLabel: string | null;
 
-  @IsNumber()
+  @Allow()
   confidence: number | null;
 
   @IsString()
