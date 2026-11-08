@@ -25,11 +25,11 @@ const classificationBranches = z.discriminatedUnion('classificationStatus', [
   ],
 );
 
-export const createDetectionSchema = classificationBranches.refine((dto) => {
-  Date.parse(dto.classifiedAt) >= Date.parse(dto.capturedAt), {
+export const createDetectionSchema = classificationBranches.refine(
+  (dto) => Date.parse(dto.classifiedAt) >= Date.parse(dto.capturedAt), {
     message: 'Classification time must not precede capture time',
     path: ['classifiedAt'],
-  };
-});
+  },
+);
 
 export type CreateDetectionDto = z.infer<typeof createDetectionSchema>;
