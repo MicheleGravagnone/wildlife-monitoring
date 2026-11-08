@@ -1,26 +1,35 @@
-import {
-  Allow,
-  IsEnum,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Validate,
-} from 'class-validator';
-import type { UUID } from 'node:crypto';
-import { ClassificationStatus } from '../../generated/prisma/client.js';
-import { ValidClassificationConstraint } from '../validators/valid-classification.constraint.js';
 import { z } from 'zod';
 
-export const createDetectionSchema = z.object({
-  eventId: z.uuid().min(0),
-  deploymentId: z.uuid().min(0),
+const detectionFields = {
+  eventId: z.uuid(),
+  deploymentId: z.uuid(),
   capturedAt: z.iso.datetime(),
-  classificationStatus: z.enum(ClassificationStatus),
-  speciesLabel: z.string().nullable(),
-  confidence: z.number().nullable(),
-  imageKey: z.string().min(1).optional(),
-  modelVersion: z.string().min(1),
+  imageKey: z.string().min(1).nullable().optional(),
+  modelVersion: z.string().trim().min(1),
   classifiedAt: z.iso.datetime(),
+};
+
+const classificationBranches = z.discriminatedUnion('classificationStatus', [
+    z.strictObject({
+      ...detectionFields,
+      classificationStatus: z.literal('IDENTIFIED'),
+      speciesLabel: z.string().trim().min(1),
+      confidence: z.number().min(0).max(1),
+    }),
+    z.strictObject({
+      ...detectionFields,
+      classificationStatus: z.enum(['UNKNOWN', 'NO_ANIMAL']),
+      speciesLabel: z.null(),
+      confidence: z.null(),
+    }),
+  ],
+);
+
+export const createDetectionSchema = classificationBranches.refine((dto) => {
+  Date.parse(dto.classifiedAt) >= Date.parse(dto.capturedAt), {
+    message: 'Classification time must not precede capture time',
+    path: ['classifiedAt'],
+  };
 });
 
 export type CreateDetectionDto = z.infer<typeof createDetectionSchema>;
