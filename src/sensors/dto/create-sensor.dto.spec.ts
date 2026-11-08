@@ -13,6 +13,7 @@ describe('createSensorSchema', () => {
     ['empty device ID', { deviceId: '' }],
     ['missing name', { name: undefined }],
     ['short name', { name: 'A' }],
+    ['extra property', { extra: true }],
   ])('rejects %s', (_description, changes) => {
     const result = createSensorSchema.safeParse({
       ...sensorInput,
@@ -20,14 +21,5 @@ describe('createSensorSchema', () => {
     });
 
     expect(result.success).toBe(false);
-  });
-
-  it('strips extra properties', () => {
-    const result = createSensorSchema.safeParse({
-      ...sensorInput,
-      extra: true,
-    });
-
-    expect(result).toEqual({ success: true, data: sensorInput });
   });
 });

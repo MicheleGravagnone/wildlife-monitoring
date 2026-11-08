@@ -34,7 +34,9 @@ export class DetectionsController {
   }
 
   @Post()
-  create(@Body({ schema: createDetectionSchema }) dto: CreateDetectionDto): Promise<Detection> {
+  create(
+    @Body({ schema: createDetectionSchema }) dto: CreateDetectionDto,
+  ): Promise<Detection> {
     return this.detectionsService.create(dto);
   }
 }

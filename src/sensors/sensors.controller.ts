@@ -23,9 +23,7 @@ export class SensorsController {
   }
 
   @Get(':id')
-  async getOne(
-    @Param('id', { schema: z.uuid().min(0) }) id: UUID,
-  ): Promise<Sensor> {
+  async getOne(@Param('id', { schema: z.uuid() }) id: UUID): Promise<Sensor> {
     const sensor = await this.sensorService.getOne(id);
     if (sensor == null) {
       throw new NotFoundException('Sensor not found');
@@ -34,7 +32,9 @@ export class SensorsController {
   }
 
   @Post()
-  create(@Body({ schema: createSensorSchema }) dto: CreateSensorDto): Promise<Sensor> {
+  create(
+    @Body({ schema: createSensorSchema }) dto: CreateSensorDto,
+  ): Promise<Sensor> {
     return this.sensorService.create(dto);
   }
 }

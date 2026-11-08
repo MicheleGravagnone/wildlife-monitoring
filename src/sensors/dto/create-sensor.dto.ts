@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-export const createSensorSchema = z.object({
-  deviceId: z.string().min(1).nonoptional(),
+export const createSensorSchema = z.strictObject({
+  deviceId: z.string().min(1),
   name: z.string().min(2),
 });
 
