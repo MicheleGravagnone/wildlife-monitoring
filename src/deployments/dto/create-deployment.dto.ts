@@ -1,36 +1,12 @@
-import {
-  IsISO8601,
-  IsNumber,
-  IsString,
-  IsUUID,
-  Max,
-  Min,
-  MinLength,
-} from 'class-validator';
-import type { UUID } from 'node:crypto';
+import { z } from 'zod';
 
-export class CreateDeploymentDto {
-  @IsUUID()
-  readonly sensorId: UUID;
+export const createDeploymentSchema = z.strictObject({
+  sensorId: z.uuid(),
+  name: z.string().min(2),
+  parkName: z.string().min(2),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  installedAt: z.iso.datetime(),
+});
 
-  @IsString()
-  @MinLength(2)
-  readonly name: string;
-
-  @IsString()
-  @MinLength(2)
-  readonly parkName: string;
-
-  @IsNumber()
-  @Min(-90)
-  @Max(90)
-  readonly latitude: number;
-
-  @IsNumber()
-  @Min(-180)
-  @Max(180)
-  readonly longitude: number;
-
-  @IsISO8601()
-  readonly installedAt: string;
-}
+export type CreateDeploymentDto = z.infer<typeof createDeploymentSchema>;

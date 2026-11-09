@@ -5,12 +5,13 @@ import {
   Body,
   NotFoundException,
   Param,
-  ParseUUIDPipe,
 } from '@nestjs/common';
 import { DetectionsService } from './detections.service.js';
 import type { Detection } from '../generated/prisma/client.js';
 import type { UUID } from 'node:crypto';
-import { CreateDetectionDto } from './dto/create-detection.dto.js';
+import type { CreateDetectionDto } from './dto/create-detection.dto.js';
+import { createDetectionSchema } from './dto/create-detection.dto.js';
+import z from 'zod';
 
 @Controller('detections')
 export class DetectionsController {
@@ -22,7 +23,9 @@ export class DetectionsController {
   }
 
   @Get(':id')
-  async getOne(@Param('id', new ParseUUIDPipe()) id: UUID): Promise<Detection> {
+  async getOne(
+    @Param('id', { schema: z.uuid() }) id: UUID,
+  ): Promise<Detection> {
     const detection = await this.detectionsService.getOne(id);
     if (detection == null) {
       throw new NotFoundException();
@@ -31,7 +34,9 @@ export class DetectionsController {
   }
 
   @Post()
-  create(@Body() dto: CreateDetectionDto): Promise<Detection> {
+  create(
+    @Body({ schema: createDetectionSchema }) dto: CreateDetectionDto,
+  ): Promise<Detection> {
     return this.detectionsService.create(dto);
   }
 }

@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { ValidationPipe, type INestApplication } from '@nestjs/common';
+import {
+  StandardSchemaValidationPipe,
+  type INestApplication,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
@@ -23,9 +26,7 @@ export function useTestApp() {
     }).compile();
     app = module.createNestApplication();
     prisma = module.get(PrismaService);
-    app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
-    );
+    app.useGlobalPipes(new StandardSchemaValidationPipe());
     await app.init();
   });
 

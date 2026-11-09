@@ -4,13 +4,14 @@ import {
   Get,
   NotFoundException,
   Param,
-  ParseUUIDPipe,
   Post,
 } from '@nestjs/common';
+import { z } from 'zod';
 import type { UUID } from 'node:crypto';
 import { DeploymentsService } from './deployments.service.js';
-import { CreateDeploymentDto } from './dto/create-deployment.dto.js';
+import type { CreateDeploymentDto } from './dto/create-deployment.dto.js';
 import type { Deployment } from '../generated/prisma/client.js';
+import { createDeploymentSchema } from './dto/create-deployment.dto.js';
 
 @Controller('deployments')
 export class DeploymentsController {
@@ -23,7 +24,7 @@ export class DeploymentsController {
 
   @Get(':id')
   async getOne(
-    @Param('id', new ParseUUIDPipe()) id: UUID,
+    @Param('id', { schema: z.uuid() }) id: UUID,
   ): Promise<Deployment> {
     const deployment = await this.deploymentsService.getOne(id);
     if (deployment == null) {
@@ -33,7 +34,9 @@ export class DeploymentsController {
   }
 
   @Post()
-  create(@Body() dto: CreateDeploymentDto): Promise<Deployment> {
+  create(
+    @Body({ schema: createDeploymentSchema }) dto: CreateDeploymentDto,
+  ): Promise<Deployment> {
     return this.deploymentsService.create(dto);
   }
 }
