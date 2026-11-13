@@ -13,22 +13,22 @@ The domain separates physical **sensors**, fixed **deployments**, and classified
 
 Authentication and public response filtering are still planned. Current routes expose full database records. See [API contract and status](docs/api-contract.md) and [domain model](docs/domain-model.md) for the distinction between implemented and intended behavior.
 
-## Local development
+## Run locally
 
-Prerequisites: Node.js 24, npm and Docker Compose (or an existing PostgreSQL instance).
+Prerequisites: Node.js 24, npm, and Docker Compose. The API runs on your machine and connects to PostgreSQL in Docker through `localhost:5432`.
 
 ```sh
 npm ci
 cp .env.example .env
-docker compose up -d db
+docker compose up -d --wait db
 npm run db:generate
 npm run db:migrate:deploy
 npm run start:dev
 ```
 
-The example environment matches the local Compose database. If port 5432 is already in use, adjust Compose and `DATABASE_URL` together. Open Swagger UI at <http://localhost:3000/api>. Resource routes start at `/sensors`, `/deployments`, and `/detections`.
+The `.env.example` values match the Compose database. The API is available at <http://localhost:3000>; Swagger UI is at <http://localhost:3000/api>. Resource routes start at `/sensors`, `/deployments`, and `/detections`. To stop PostgreSQL, run `docker compose down`; its data remains in the Compose volume.
 
-Use `npm run db:migrate -- --name <change>` when developing schema changes, then regenerate the client. Generated Prisma code lives in `src/generated/prisma/` and is ignored by Git.
+If port 5432 is already in use, change the published port in `compose.yaml` and the port in `DATABASE_URL` in `.env` to match. For local schema development, run `npm run db:migrate -- --name <migration-name>` to create and apply a migration. `npm run db:generate` regenerates the Prisma Client when needed; generated code lives in `src/generated/prisma/` and is ignored by Git.
 
 ## Repository layout
 
@@ -48,7 +48,7 @@ examples/                 HTTP requests for manual exploration
 
 Unit tests (`*.spec.ts`) live next to their implementation. `test/e2e/` contains HTTP tests grouped by feature; `test/support/` contains their shared setup. Feature modules depend on the Prisma module directly, without dependencies on unrelated feature modules. Prisma is the source of persistence model types; input DTOs define request validation. Explicit public response DTOs will be introduced with access controls.
 
-## Quality checks
+## Tests and checks
 
 ```sh
 npm run build
@@ -58,18 +58,17 @@ npm run format:check
 npm test
 ```
 
-GitHub Actions runs code quality checks and unit tests independently from database-backed HTTP tests. Both jobs have a ten-minute timeout. CI runs on pushes to `main` and `prisma`, on pull requests, and manually; newer runs cancel superseded runs for the same branch or PR.
-
-Unit tests mock database access and require no running database. End-to-end tests require a **separate, migrated test database**:
+`npm test` runs unit tests, which mock database access and need no running database. End-to-end HTTP tests use real PostgreSQL and require a **separate test database**. With the Compose database running, create it once, set its connection URL, apply migrations, then run the tests:
 
 ```sh
-# Set this to a dedicated PostgreSQL database before running these commands.
+docker compose exec db sh -c 'createdb -U "$POSTGRES_USER" wildlife_test'
+
 export TEST_DATABASE_URL='postgresql://wildlife:wildlife_local@localhost:5432/wildlife_test'
 DATABASE_URL="$TEST_DATABASE_URL" npm run db:migrate:deploy
 npm run test:e2e
 ```
 
-Create `wildlife_test` in your local PostgreSQL instance first. Tests create their own records and remove those records in foreign key order; they do not require seeded data or truncate tables. `TEST_DATABASE_URL` is mandatory and never falls back to the development database.
+Adjust the username, password, and port in `TEST_DATABASE_URL` if you changed the Compose settings. `TEST_DATABASE_URL` is necessary for end-to-end tests and must identify a database separate from development; tests create and clean up their own records and do not truncate tables. GitHub Actions runs these database-backed tests alongside the quality checks on pull requests.
 
 ## Next milestones
 
