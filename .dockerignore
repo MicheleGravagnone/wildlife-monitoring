@@ -1,0 +1,15 @@
+node_modules
+dist
+npm-debug.log
+.git
+.github
+.env
+.env.*
+!.env.example
+*.md
+docs
+examples
+test
+.oxlintrc.json
+.prettier*
+vitest.config*
