@@ -2,7 +2,7 @@
 
 A NestJS REST API for wildlife observations from ESP32 camera and PIR sensors in parks around Łódź, Poland. Developed for the Research Based Workshop, AY 2026/27.
 
-The domain separates physical **sensors**, fixed **deployments**, and classified **detections**, preserving observation locations when a sensor moves. This repository contains the backend; device capture, cloud inference, and the frontend belong to the wider project.
+The domain separates physical **sensors**, fixed **deployments**, and classified **detections**, preserving observation locations when a sensor moves. The backend coordinates asynchronous photo capture ingestion with an external AI vision inference service via **RabbitMQ** before persisting immutable observations to PostgreSQL.
 
 ## Current scope
 
@@ -11,7 +11,7 @@ The domain separates physical **sensors**, fixed **deployments**, and classified
 - Request validation and Swagger UI.
 - Vitest unit tests and database-backed HTTP end-to-end tests.
 
-Authentication and public response filtering are still planned. Current routes expose full database records. See [API contract and status](docs/api-contract.md) and [domain model](docs/domain-model.md) for the distinction between implemented and intended behavior.
+Authentication, public response filtering, and asynchronous RabbitMQ pipeline integration are planned. Current routes expose full database records. See [API contract and status](docs/api-contract.md) and [domain model](docs/domain-model.md) for more details.
 
 PlantUML diagrams distinguish implemented behavior from planned architecture in [docs/diagrams](docs/diagrams/README.md).
 
@@ -50,7 +50,7 @@ src/
   prisma/                 Shared database provider and lifecycle
 prisma/                   Schema and versioned migrations
 test/                     HTTP tests and shared test support
-docs/                     Domain rules and API implementation status
+docs/                     Domain rules, API contracts, and architecture decisions
 examples/                 HTTP requests for manual exploration
 ```
 
@@ -81,6 +81,8 @@ Adjust the username, password, and port in `TEST_DATABASE_URL` if you changed th
 ## Next milestones
 
 - Service credentials and user authentication.
+- Asynchronous capture ingestion and AI inference integration via RabbitMQ (AMQP).
+- Object storage (S3/MinIO) integration for raw photo storage and presigned image URLs.
 - Public and authenticated response views and private image access.
 - Idempotent ingestion and cross-field domain validation.
-- Pagination
+- Pagination.

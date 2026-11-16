@@ -79,3 +79,41 @@ Rules:
 Public detection responses contain only `id`, `capturedAt`, `speciesLabel`, and deployment `latitude`/`longitude` resolved from the referenced Deployment. Only `identified` detections appear in the public map and public detection endpoints.
 
 Authenticated detection responses include all Detection fields except `imageKey`, plus the deployment location and park name. Authenticated users can also retrieve Sensor and Deployment details and an image URL when an image exists. They can read `unknown` and `no_animal` records for additional context.
+
+## Ingestion and inference pipeline
+
+The capture-to-observation workflow separates photo reception from AI model inference through an asynchronous message-driven pipeline:
+
+```
+[ ESP32 Sensor ]
+       │
+       ▼ (1. POST raw capture + metadata)
+[ Backend Ingestion API ] ──► [ Object Storage (S3/MinIO) ] (2. Save imageKey)
+       │
+       ▼ (3. Publish job to 'captures.raw' & return 202 Accepted)
+[ RabbitMQ Broker ]
+       │
+       ▼ (4. Controlled pull with prefetch_count)
+[ Python AI Inference Service ] (5. Run PyTorch / YOLO vision model)
+       │
+       ▼ (6. Publish result to 'detections.classified')
+[ RabbitMQ Broker ]
+       │
+       ▼ (7. Consume & persist immutable record)
+[ Backend / Prisma ] ──► [ PostgreSQL 17 ]
+```
+
+1. **Photo capture upload**:
+   - The ESP32 camera uploads the raw image and metadata (`eventId`, `deploymentId`, `capturedAt`).
+   - The backend stores the image in private object storage (e.g. MinIO/S3), generating an immutable `imageKey`.
+   - The backend dispatches a processing task to RabbitMQ (`captures.raw`) and responds immediately with `202 Accepted`. This quick turnaround minimizes device radio transmission time and conserves battery.
+2. **AI model inference**:
+   - An external Python inference service (running PyTorch/ONNX computer vision models) consumes jobs from `captures.raw`.
+   - Consumer prefetch (`prefetch_count`) is constrained to match GPU processing capacity, providing backpressure that prevents GPU out-of-memory (OOM) failures during bursty capture periods (e.g. animal herds triggering frequent photos at dawn/dusk).
+   - The AI worker classifies the image, assigning `classificationStatus` (`IDENTIFIED`, `UNKNOWN`, `NO_ANIMAL`), `speciesLabel`, `confidence`, and `modelVersion`.
+   - The AI worker publishes the completed result to the `detections.classified` queue.
+3. **Observation persistence**:
+   - The backend consumes the `detections.classified` queue and persists the immutable `Detection` record in PostgreSQL via Prisma.
+   - Idempotency guarantees: if an `eventId` has already been recorded with matching data, the event is acknowledged without duplication; if conflicting data is received for an existing `eventId`, an alert or rejection is logged.
+4. **Dead-letter handling**:
+   - Corrupted or unprocessable images are routed via a RabbitMQ Dead Letter Exchange (DLX) to `captures.dlq` after maximum retries, ensuring malformed payloads do not stall worker queues.
