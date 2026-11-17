@@ -1,0 +1,56 @@
+@startuml
+title Target — User, sensor, and AI workflow
+left to right direction
+skinparam packageStyle rectangle
+
+actor Visitor
+actor "Authenticated reader" as Reader
+actor "Provisioning service" as Provisioner
+actor "ESP32 camera\n(ingestion credential)" as Device
+actor "AI inference worker" as AI
+
+Reader --|> Visitor
+
+rectangle "Wildlife Monitor platform (planned)" {
+  usecase "View public map\nof identified detections" as PublicMap
+  usecase "Read public detection\nsummary" as PublicRead
+  usecase "Read sensors and deployments" as PrivateRead
+  usecase "Read full detection context" as FullRead
+  usecase "Request temporary image URL" as ImageUrl
+  usecase "Register sensor" as RegisterSensor
+  usecase "Register deployment" as RegisterDeployment
+  usecase "Upload capture metadata\nand image" as Upload
+  usecase "Store image privately" as Store
+  usecase "Queue capture for inference" as QueueCapture
+  usecase "Classify capture" as Classify
+  usecase "Submit classification result" as SubmitResult
+  usecase "Persist immutable Detection" as Persist
+  usecase "Retry or dead-letter failure" as Failure
+}
+
+Visitor --> PublicMap
+Visitor --> PublicRead
+Reader --> PrivateRead
+Reader --> FullRead
+Reader --> ImageUrl
+Provisioner --> RegisterSensor
+Provisioner --> RegisterDeployment
+Device --> Upload
+AI --> Classify
+AI --> SubmitResult
+
+Upload ..> Store : <<include>>
+Upload ..> QueueCapture : <<include>>
+SubmitResult ..> Persist : <<include>>
+QueueCapture ..> Failure : <<extend>>
+Classify ..> Failure : <<extend>>
+
+note bottom of Provisioner
+  Provisioning and ingestion use service credentials;
+  user login does not grant write access.
+end note
+note bottom of Reader
+  Authenticated read-only account. No edit/delete
+  operations are planned for domain records.
+end note
+@enduml

@@ -13,6 +13,8 @@ The domain separates physical **sensors**, fixed **deployments**, and classified
 
 Authentication and public response filtering are still planned. Current routes expose full database records. See [API contract and status](docs/api-contract.md) and [domain model](docs/domain-model.md) for the distinction between implemented and intended behavior.
 
+PlantUML diagrams distinguish implemented behavior from planned architecture in [docs/diagrams](docs/diagrams/README.md).
+
 ## Run locally
 
 Prerequisites: Node.js 24, npm, and Docker Compose. The API runs on your machine and connects to PostgreSQL in Docker through `localhost:5432`.

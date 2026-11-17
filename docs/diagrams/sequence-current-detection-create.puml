@@ -1,0 +1,37 @@
+@startuml
+title Current — Create a Detection through the REST API
+autonumber
+actor "API client\n(unauthenticated)" as Client
+participant "DetectionsController" as Controller
+participant "StandardSchemaValidationPipe\n(Zod schema)" as Validation
+participant "DetectionsService" as Service
+participant "PrismaService" as Prisma
+database "PostgreSQL" as DB
+
+Client -> Controller: POST /detections\nJSON body
+Controller -> Validation: validate createDetectionSchema
+alt invalid body
+  Validation --> Client: 400 Bad Request
+else valid body
+  Validation --> Controller: parsed CreateDetectionDto
+  Controller -> Service: create(dto)
+  Service -> Prisma: detection.create(data)
+  Prisma -> DB: INSERT Detection
+  alt unique eventId conflict
+    DB --> Prisma: unique constraint error (P2002)
+    Prisma --> Service: error
+    Service --> Client: 409 Conflict
+  else insert succeeds
+    DB --> Prisma: Detection row
+    Prisma --> Service: Detection
+    Service --> Controller: Detection
+    Controller --> Client: 201 Created\nfull Prisma record
+  end
+end
+
+note over Controller,DB
+  Current route has no authentication or output filtering.
+  Foreign-key constraints are enforced by PostgreSQL/Prisma.
+  The API does not upload an image or publish a queue message.
+end note
+@enduml

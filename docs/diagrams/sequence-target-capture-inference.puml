@@ -1,0 +1,53 @@
+@startuml
+title Target — Capture upload, asynchronous inference, and Detection persistence
+autonumber
+actor "ESP32 camera" as Device
+participant "Capture Ingestion API" as API
+participant "Credential / request validation" as Auth
+participant "Private object storage\n(S3 or MinIO)" as Storage
+queue "RabbitMQ\ncaptures.raw" as RawQueue
+participant "Python AI inference worker" as Worker
+queue "RabbitMQ\ndetections.classified" as ResultQueue
+participant "Detection consumer" as Consumer
+database "PostgreSQL\nvia Prisma" as DB
+queue "captures.dlq" as DLQ
+
+Device -> API: POST /api/captures\nmetadata + image bytes
+API -> Auth: authorize ingestion service\nand validate metadata
+alt unauthorized or invalid metadata
+  Auth --> API: reject
+  API --> Device: 401/403 or 400
+else accepted
+  Auth --> API: CaptureMetadata
+  API -> DB: verify deployment exists\n[planned domain validation]
+  DB --> API: deployment and installedAt
+  API -> Storage: store image privately
+  Storage --> API: imageKey
+  API -> RawQueue: publish persistent RawCaptureMessage
+  API --> Device: 202 Accepted\neventId
+
+  RawQueue -> Worker: deliver with bounded prefetch
+  Worker -> Storage: fetch image by imageKey
+  Storage --> Worker: image bytes
+  alt image missing/corrupt or inference repeatedly fails
+    Worker -> RawQueue: reject/retry according to policy
+    RawQueue -> DLQ: route after configured retry limit
+  else inference succeeds
+    Worker -> Worker: run model inference
+    Worker -> ResultQueue: publish ClassifiedResultMessage
+    Worker --> RawQueue: acknowledge raw capture
+    ResultQueue -> Consumer: deliver classification result
+    Consumer -> Consumer: validate status and fields
+    Consumer -> Storage: confirm image exists [planned]
+    Consumer -> DB: persist immutable Detection
+    DB --> Consumer: stored row or existing matching eventId
+    Consumer --> ResultQueue: acknowledge message
+  end
+end
+
+note over API,DLQ
+  This flow is documented target behavior, not current implementation.
+  Queue retry count/backoff and storage provider remain deployment decisions.
+  The docs suggest a bounded retry policy and dead-letter routing.
+end note
+@enduml

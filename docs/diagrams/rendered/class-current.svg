@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="953px" preserveAspectRatio="none" style="width:913px;height:953px;" version="1.1" viewBox="0 0 913 953" width="913px" zoomAndPan="magnify"><defs><filter height="300%" id="f1au0v13r14vp4" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><text fill="#000000" font-family="sans-serif" font-size="18" lengthAdjust="spacingAndGlyphs" textLength="558" x="180.5" y="16.708">Wildlife Monitor — Current data model (authentication branch)</text><!--MD5=[5543a1d0c077c5e91eacdffa479dd694]
+cluster Prisma / PostgreSQL--><rect fill="#FFFFFF" filter="url(#f1au0v13r14vp4)" height="877.41" style="stroke: #000000; stroke-width: 1.5;" width="549" x="22" y="65.5431"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="161" x="216" y="80.5382">Prisma / PostgreSQL</text><!--MD5=[97d46ae094d28e0d28828e4b8046fed1]
+class Sensor--><rect fill="#FEFECE" filter="url(#f1au0v13r14vp4)" height="91.2188" id="Sensor" style="stroke: #A80036; stroke-width: 1.5;" width="213" x="317.5" y="120.5431"/><ellipse cx="397.75" cy="136.5431" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M400.7188,142.1838 Q400.1406,142.4806 399.5,142.6213 Q398.8594,142.7775 398.1563,142.7775 Q395.6563,142.7775 394.3281,141.1369 Q393.0156,139.4806 393.0156,136.3556 Q393.0156,133.2306 394.3281,131.5744 Q395.6563,129.9181 398.1563,129.9181 Q398.8594,129.9181 399.5,130.0744 Q400.1563,130.2306 400.7188,130.5275 L400.7188,133.2463 Q400.0938,132.6681 399.5,132.4025 Q398.9063,132.1213 398.2813,132.1213 Q396.9375,132.1213 396.25,133.1994 Q395.5625,134.2619 395.5625,136.3556 Q395.5625,138.4494 396.25,139.5275 Q396.9375,140.59 398.2813,140.59 Q398.9063,140.59 399.5,140.3244 Q400.0938,140.0431 400.7188,139.465 L400.7188,142.1838 Z "/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="44" x="418.25" y="140.6974">Sensor</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="318.5" x2="529.5" y1="152.5431" y2="152.5431"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="130" x="323.5" y="166.7536">+id: UUID «generated»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="153" x="323.5" y="179.5583">+deviceId: String «unique»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="83" x="323.5" y="192.3629">+name: String</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="201" x="323.5" y="205.1676">+createdAt: DateTime «generated»</text><!--MD5=[0b39f38c1c24e25039dcaeabf39aa6ad]
+class Deployment--><rect fill="#FEFECE" filter="url(#f1au0v13r14vp4)" height="142.4375" id="Deployment" style="stroke: #A80036; stroke-width: 1.5;" width="213" x="301.5" y="328.5431"/><ellipse cx="366.75" cy="344.5431" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M369.7188,350.1838 Q369.1406,350.4806 368.5,350.6213 Q367.8594,350.7775 367.1563,350.7775 Q364.6563,350.7775 363.3281,349.1369 Q362.0156,347.4806 362.0156,344.3556 Q362.0156,341.2306 363.3281,339.5744 Q364.6563,337.9181 367.1563,337.9181 Q367.8594,337.9181 368.5,338.0744 Q369.1563,338.2306 369.7188,338.5275 L369.7188,341.2463 Q369.0938,340.6681 368.5,340.4025 Q367.9063,340.1213 367.2813,340.1213 Q365.9375,340.1213 365.25,341.1994 Q364.5625,342.2619 364.5625,344.3556 Q364.5625,346.4494 365.25,347.5275 Q365.9375,348.59 367.2813,348.59 Q367.9063,348.59 368.5,348.3244 Q369.0938,348.0431 369.7188,347.465 L369.7188,350.1838 Z "/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="74" x="387.25" y="348.6974">Deployment</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="302.5" x2="513.5" y1="360.5431" y2="360.5431"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="130" x="307.5" y="374.7536">+id: UUID «generated»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="94" x="307.5" y="387.5583">+sensorId: UUID</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="83" x="307.5" y="400.3629">+name: String</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="109" x="307.5" y="413.1676">+parkName: String</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="86" x="307.5" y="425.9723">+latitude: Float</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="96" x="307.5" y="438.777">+longitude: Float</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="130" x="307.5" y="451.5817">+installedAt: DateTime</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="201" x="307.5" y="464.3864">+createdAt: DateTime «generated»</text><!--MD5=[91d939cc50f48c664a373220bb58b7c5]
+class Detection--><rect fill="#FEFECE" filter="url(#f1au0v13r14vp4)" height="180.8516" id="Detection" style="stroke: #A80036; stroke-width: 1.5;" width="253" x="277.5" y="587.5431"/><ellipse cx="369.25" cy="603.5431" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M372.2188,609.1837 Q371.6406,609.4806 371,609.6212 Q370.3594,609.7775 369.6563,609.7775 Q367.1563,609.7775 365.8281,608.1369 Q364.5156,606.4806 364.5156,603.3556 Q364.5156,600.2306 365.8281,598.5744 Q367.1563,596.9181 369.6563,596.9181 Q370.3594,596.9181 371,597.0744 Q371.6563,597.2306 372.2188,597.5275 L372.2188,600.2462 Q371.5938,599.6681 371,599.4025 Q370.4063,599.1212 369.7813,599.1212 Q368.4375,599.1212 367.75,600.1994 Q367.0625,601.2619 367.0625,603.3556 Q367.0625,605.4494 367.75,606.5275 Q368.4375,607.59 369.7813,607.59 Q370.4063,607.59 371,607.3244 Q371.5938,607.0431 372.2188,606.465 L372.2188,609.1837 Z "/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="61" x="389.75" y="607.6974">Detection</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="278.5" x2="529.5" y1="619.5431" y2="619.5431"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="130" x="283.5" y="633.7536">+id: UUID «generated»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="141" x="283.5" y="646.5583">+eventId: UUID «unique»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="120" x="283.5" y="659.3629">+deploymentId: UUID</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="132" x="283.5" y="672.1676">+capturedAt: DateTime</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="241" x="283.5" y="684.9723">+classificationStatus: ClassificationStatus</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="131" x="283.5" y="697.777">+speciesLabel: String?</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="111" x="283.5" y="710.5817">+confidence: Float?</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="112" x="283.5" y="723.3864">+imageKey: String?</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="129" x="283.5" y="736.1911">+modelVersion: String</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="136" x="283.5" y="748.9958">+classifiedAt: DateTime</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="201" x="283.5" y="761.8004">+createdAt: DateTime «generated»</text><!--MD5=[3fd616f346a44cd59a91eb10b19e157c]
+class User--><rect fill="#FEFECE" filter="url(#f1au0v13r14vp4)" height="122.7656" id="User" style="stroke: #A80036; stroke-width: 1.5;" width="220" x="38" y="104.6531"/><ellipse cx="53" cy="123.6219" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M55.9688,129.2625 Q55.3906,129.5594 54.75,129.7 Q54.1094,129.8563 53.4063,129.8563 Q50.9063,129.8563 49.5781,128.2156 Q48.2656,126.5594 48.2656,123.4344 Q48.2656,120.3094 49.5781,118.6531 Q50.9063,116.9969 53.4063,116.9969 Q54.1094,116.9969 54.75,117.1531 Q55.4063,117.3094 55.9688,117.6063 L55.9688,120.325 Q55.3438,119.7469 54.75,119.4813 Q54.1563,119.2 53.5313,119.2 Q52.1875,119.2 51.5,120.2781 Q50.8125,121.3406 50.8125,123.4344 Q50.8125,125.5281 51.5,126.6063 Q52.1875,127.6688 53.5313,127.6688 Q54.1563,127.6688 54.75,127.4031 Q55.3438,127.1219 55.9688,126.5438 L55.9688,129.2625 Z "/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="192" x="65" y="120.7918">«schema only; auth not wired»</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="29" x="146.5" y="134.7605">User</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="39" x2="257" y1="142.5906" y2="142.5906"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="130" x="44" y="156.8011">+id: UUID «generated»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="83" x="44" y="169.6058">+name: String</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="102" x="44" y="182.4104">+surname: String</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="138" x="44" y="195.2151">+email: String «unique»</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="137" x="44" y="208.0198">+emailVerified: Boolean</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="63" x="44" y="220.8245">+role: Role</text><!--MD5=[db26ef4211e31b20ff167976b3d0b6d5]
+class ClassificationStatus--><rect fill="#FEFECE" filter="url(#f1au0v13r14vp4)" height="78.4141" id="ClassificationStatus" style="stroke: #A80036; stroke-width: 1.5;" width="155" x="326.5" y="848.5431"/><ellipse cx="341.5" cy="864.5431" fill="#EB937F" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M345.6094,870.5431 L337.8906,870.5431 L337.8906,858.1525 L345.6094,858.1525 L345.6094,860.3088 L340.3438,860.3088 L340.3438,862.9806 L345.1094,862.9806 L345.1094,865.1369 L340.3438,865.1369 L340.3438,868.3869 L345.6094,868.3869 L345.6094,870.5431 Z "/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="123" x="355.5" y="868.6974">ClassificationStatus</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="327.5" x2="480.5" y1="880.5431" y2="880.5431"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="60" x="332.5" y="894.7536">IDENTIFIED</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="57" x="332.5" y="907.5583">UNKNOWN</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="63" x="332.5" y="920.3629">NO_ANIMAL</text><!--MD5=[a3638c1e5b65d287ecad7f06f5c0f212]
+class Role--><rect fill="#FEFECE" filter="url(#f1au0v13r14vp4)" height="65.6094" id="Role" style="stroke: #A80036; stroke-width: 1.5;" width="102" x="97" y="366.7331"/><ellipse cx="131.35" cy="382.7331" fill="#EB937F" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M135.4594,388.7331 L127.7406,388.7331 L127.7406,376.3425 L135.4594,376.3425 L135.4594,378.4988 L130.1938,378.4988 L130.1938,381.1706 L134.9594,381.1706 L134.9594,383.3269 L130.1938,383.3269 L130.1938,386.5769 L135.4594,386.5769 L135.4594,388.7331 Z "/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="27" x="149.65" y="386.8874">Role</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="98" x2="198" y1="398.7331" y2="398.7331"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="65" x="103" y="412.9436">DEVELOPER</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="90" x="103" y="425.7483">ADMINISTRATOR</text><path d="M589,138.3431 L589,193.7416 L901,193.7416 L901,148.3431 L891,138.3431 L589,138.3431 " fill="#FBFB77" filter="url(#f1au0v13r14vp4)" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M891,138.3431 L891,148.3431 L901,148.3431 L891,138.3431 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="291" x="595" y="155.41">Present in the Prisma schema on this branch.</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="289" x="595" y="170.5428">Authentication behavior and relations are not</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="242" x="595" y="185.6756">represented in the live controllers yet.</text><path d="M586.5,867.6131 L586.5,907.8788 A0,0 0 0 0 586.5,907.8788 L899.5,907.8788 A0,0 0 0 0 899.5,907.8788 L899.5,877.6131 L889.5,867.6131 L715.3,867.6131 L530.23,756.0631 L707.3,867.6131 L586.5,867.6131 A0,0 0 0 0 586.5,867.6131 " fill="#FBFB77" filter="url(#f1au0v13r14vp4)" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M889.5,867.6131 L889.5,877.6131 L899.5,877.6131 L889.5,867.6131 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="292" x="592.5" y="884.68">imageKey is metadata only in the current API.</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="253" x="592.5" y="899.8128">Upload and object storage are planned.</text><!--MD5=[6612ea50250813eb10678c7c186aaf67]
+link Sensor to Deployment--><path d="M420.93,211.4031 C418.64,244.6131 415.45,290.7031 412.82,328.8231 " fill="none" id="Sensor-Deployment" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="143" x="418.43" y="274.61">has installation history</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="8" x="408.5996" y="231.633">1</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="23" x="389.0894" y="317.318">0..*</text><!--MD5=[ac7ddfd7a4085c18e0e811ec3a621066]
+link Deployment to Detection--><path d="M406.99,470.1831 C406.47,505.7931 405.84,549.5331 405.29,587.5631 " fill="none" id="Deployment-Detection" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="108" x="407.24" y="533.61">records captures</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="8" x="397.0799" y="491.2641">1</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="23" x="381.4445" y="576.5277">0..*</text><!--MD5=[b09c702fb09d99ca40fe3e5dff0c6a9d]
+link Detection to ClassificationStatus--><path d="M404,767.4431 C404,793.0931 404,820.0031 404,841.7631 " fill="none" id="Detection-&gt;ClassificationStatus" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="404,846.5331,408,837.5331,404,841.5331,400,837.5331,404,846.5331" style="stroke: #A80036; stroke-width: 1.0;"/><!--MD5=[70c37dc9bfbc8656942103c36f1181e4]
+link User to Role--><path d="M148,227.8631 C148,269.6031 148,323.7531 148,359.7531 " fill="none" id="User-&gt;Role" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="#A80036" points="148,364.7431,152,355.7431,148,359.7431,144,355.7431,148,364.7431" style="stroke: #A80036; stroke-width: 1.0;"/><!--MD5=[fcd6de562598cfd5117c58bda3190681]
+link User to GMN13--><path d="M201.93,104.2631 C227.04,80.1131 258.98,55.2131 293.5,42.5431 C347.74,22.6231 498.08,26.2131 553.5,42.5431 C616.5,61.0931 678.31,107.5131 713.99,137.8531 " fill="none" id="User-GMN13" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><!--MD5=[5f6c1b91ea63819d39e628887c3c62a5]
+@startuml
+title Wildlife Monitor — Current data model (authentication branch)
+hide methods
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "Prisma / PostgreSQL" {
+  class Sensor {
+    +id: UUID <<generated>>
+    +deviceId: String <<unique>>
+    +name: String
+    +createdAt: DateTime <<generated>>
+  }
+
+  class Deployment {
+    +id: UUID <<generated>>
+    +sensorId: UUID
+    +name: String
+    +parkName: String
+    +latitude: Float
+    +longitude: Float
+    +installedAt: DateTime
+    +createdAt: DateTime <<generated>>
+  }
+
+  class Detection {
+    +id: UUID <<generated>>
+    +eventId: UUID <<unique>>
+    +deploymentId: UUID
+    +capturedAt: DateTime
+    +classificationStatus: ClassificationStatus
+    +speciesLabel: String?
+    +confidence: Float?
+    +imageKey: String?
+    +modelVersion: String
+    +classifiedAt: DateTime
+    +createdAt: DateTime <<generated>>
+  }
+
+  class User <<schema only; auth not wired>> {
+    +id: UUID <<generated>>
+    +name: String
+    +surname: String
+    +email: String <<unique>>
+    +emailVerified: Boolean
+    +role: Role
+  }
+
+  enum ClassificationStatus {
+    IDENTIFIED
+    UNKNOWN
+    NO_ANIMAL
+  }
+
+  enum Role {
+    DEVELOPER
+    ADMINISTRATOR
+  }
+}
+
+Sensor "1" - - "0..*" Deployment : has installation history
+Deployment "1" - - "0..*" Detection : records captures
+Detection - -> ClassificationStatus
+User - -> Role
+
+note right of User
+  Present in the Prisma schema on this branch.
+  Authentication behavior and relations are not
+  represented in the live controllers yet.
+end note
+
+note bottom of Detection
+  imageKey is metadata only in the current API.
+  Upload and object storage are planned.
+end note
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 11:22:07 CET 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 25.0.5.0.3+1-1-26.04.1-Ubuntu
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: null
+--></g></svg>
