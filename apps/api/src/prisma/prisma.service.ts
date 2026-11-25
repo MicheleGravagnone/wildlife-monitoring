@@ -1,7 +1,10 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import 'dotenv/config';
+import { config } from 'dotenv';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client.js';
+
+// npm runs workspace scripts from apps/api; the shared .env lives at the repo root.
+config({ path: ['.env', '../../.env'], quiet: true });
 
 @Injectable()
 export class PrismaService

@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import {
-  StandardSchemaValidationPipe,
-  type INestApplication,
-} from '@nestjs/common';
+import { type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
+import { configureApp } from '../../src/app.setup.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { sensorInput, deploymentInput, detectionInput } from './fixtures.js';
 
@@ -26,7 +24,7 @@ export function useTestApp() {
     }).compile();
     app = module.createNestApplication();
     prisma = module.get(PrismaService);
-    app.useGlobalPipes(new StandardSchemaValidationPipe());
+    configureApp(app);
     await app.init();
   });
 
@@ -59,7 +57,7 @@ export function useTestApp() {
   async function createSensor() {
     return (
       await request(app.getHttpServer())
-        .post('/sensors')
+        .post('/api/v1/sensors')
         .send(newSensorInput())
         .expect(201)
     ).body;
@@ -69,7 +67,7 @@ export function useTestApp() {
     const id = sensorId ?? (await createSensor()).id;
     return (
       await request(app.getHttpServer())
-        .post('/deployments')
+        .post('/api/v1/deployments')
         .send({ ...deploymentInput, sensorId: id })
         .expect(201)
     ).body;
@@ -79,7 +77,7 @@ export function useTestApp() {
     const deployment = await createDeployment();
     return (
       await request(app.getHttpServer())
-        .post('/detections')
+        .post('/api/v1/detections')
         .send({
           ...detectionInput,
           eventId: randomUUID(),

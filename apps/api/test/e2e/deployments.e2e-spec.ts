@@ -7,22 +7,22 @@ describe('Deployment HTTP API', () => {
     const record = await api.createDeployment();
     const lookup = await api
       .http()
-      .get(`/deployments/${record.id}`)
+      .get(`/api/v1/deployments/${record.id}`)
       .expect(200);
     expect(lookup.body).toEqual(record);
-    const list = await api.http().get('/deployments').expect(200);
+    const list = await api.http().get('/api/v1/deployments').expect(200);
     expect(list.body).toContainEqual(record);
     expect(new Date(record.createdAt).toISOString()).toBe(record.createdAt);
   });
 
   it('rejects malformed IDs', async () => {
-    await api.http().get('/deployments/invalid-id').expect(400);
+    await api.http().get('/api/v1/deployments/invalid-id').expect(400);
   });
 
   it('returns 404 for missing records', async () => {
     await api
       .http()
-      .get('/deployments/00000000-0000-4000-8000-000000000000')
+      .get('/api/v1/deployments/00000000-0000-4000-8000-000000000000')
       .expect(404);
   });
 
@@ -31,7 +31,10 @@ describe('Deployment HTTP API', () => {
     const first = await api.createDeployment(sensor.id);
     const second = await api.createDeployment(sensor.id);
     expect(second.id).not.toBe(first.id);
-    const lookup = await api.http().get(`/deployments/${first.id}`).expect(200);
+    const lookup = await api
+      .http()
+      .get(`/api/v1/deployments/${first.id}`)
+      .expect(200);
     expect(lookup.body).toEqual(first);
   });
 
@@ -45,7 +48,7 @@ describe('Deployment HTTP API', () => {
     const { id: _id, createdAt: _createdAt, ...input } = deployment;
     await api
       .http()
-      .post('/deployments')
+      .post('/api/v1/deployments')
       .send({ ...input, ...changes })
       .expect(400);
   });
