@@ -1,6 +1,6 @@
-# Wildlife Monitor — Backend
+# Wildlife Monitor
 
-A NestJS REST API for wildlife observations from ESP32 camera and PIR sensors in parks around Łódź, Poland. Developed for the Research Based Workshop, AY 2026/27.
+A monorepo for wildlife monitoring. It currently contains a NestJS REST API for wildlife observations from ESP32 camera and PIR sensors in parks around Łódź, Poland. Developed for the Research Based Workshop, AY 2026/27.
 
 The domain separates physical **sensors**, fixed **deployments**, and classified **detections**, preserving observation locations when a sensor moves. The backend coordinates asynchronous photo capture ingestion with an external AI vision inference service via **RabbitMQ** before persisting immutable observations to PostgreSQL.
 
@@ -44,25 +44,33 @@ Alternatively, to run the entire backend containerized:
 docker compose --profile app up --build
 ```
 
-The `.env.example` values match the Compose database. The API is available at <http://localhost:3000>; Swagger UI is at <http://localhost:3000/api>. Resource routes start at `/sensors`, `/deployments`, and `/detections`. To stop PostgreSQL, run `docker compose down`; its data remains in the Compose volume.
+The `.env.example` values match the Compose database. The API is available at <http://localhost:3000>; Swagger UI is at <http://localhost:3000/api/docs>. Resource routes are versioned under `/api/v1`: `/api/v1/sensors`, `/api/v1/deployments`, and `/api/v1/detections`. To stop PostgreSQL, run `docker compose down`; its data remains in the Compose volume.
 
-If port 5432 is already in use, change the published port in `compose.yaml` and the port in `DATABASE_URL` in `.env` to match. For local schema development, run `npm run db:migrate -- --name <migration-name>` to create and apply a migration. `npm run db:generate` regenerates the Prisma Client when needed; generated code lives in `src/generated/prisma/` and is ignored by Git.
+If port 5432 is already in use, change the published port in `compose.yaml` and the port in `DATABASE_URL` in `.env` to match. For local schema development, run `npm run db:migrate -- --name <migration-name>` to create and apply a migration. `npm run db:generate` regenerates the Prisma Client when needed; generated code lives in `apps/api/src/generated/prisma/` and is ignored by Git.
 
 ## Repository layout
 
+The repository uses npm workspaces. Root scripts (`npm run build`, `npm test`, and so on) run the matching script in `apps/api`; one `.env` at the root serves Compose and the API.
+
 ```text
-src/
-  main.ts                 Application bootstrap, validation, Swagger
-  app.module.ts           Feature composition
-  sensors/                Physical device registration and lookup
-  deployments/            Fixed installations and locations
-  detections/             Classified capture events
-  prisma/                 Shared database provider and lifecycle
-prisma/                   Schema and versioned migrations
-test/                     HTTP tests and shared test support
-docs/                     Domain rules, API contracts, and architecture decisions
-examples/                 HTTP requests for manual exploration
+apps/
+  api/                    NestJS API (workspace @wildlife-monitor/api)
+    src/
+      main.ts             Application bootstrap, validation, Swagger
+      app.module.ts       Feature composition
+      sensors/            Physical device registration and lookup
+      deployments/        Fixed installations and locations
+      detections/         Classified capture events
+      prisma/             Shared database provider and lifecycle
+    prisma/               Schema and versioned migrations
+    test/                 HTTP tests and shared test support
+    examples/             HTTP requests for manual exploration
+    Dockerfile            Built from the repository root
+docs/                     Domain rules, API contracts, diagrams, and wireframes
+compose.yaml              Local services (PostgreSQL, containerized API)
 ```
+
+The Python AI worker (`services/ai/`) and the web frontend (`apps/web/`) will be added in their own directories.
 
 Unit tests (`*.spec.ts`) live next to their implementation. `test/e2e/` contains HTTP tests grouped by feature; `test/support/` contains their shared setup. Feature modules depend on the Prisma module directly, without dependencies on unrelated feature modules. Prisma is the source of persistence model types; input DTOs define request validation. Explicit public response DTOs will be introduced with access controls.
 

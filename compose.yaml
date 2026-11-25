@@ -18,7 +18,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: apps/api/Dockerfile
     profiles: ["app", "full"]
     ports:
       - "${PORT:-3000}:3000"

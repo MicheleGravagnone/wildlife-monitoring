@@ -1,11 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
-import { StandardSchemaValidationPipe } from '@nestjs/common';
+import { API_PREFIX, configureApp } from './app.setup.js';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new StandardSchemaValidationPipe());
+  configureApp(app);
 
   app.enableShutdownHooks();
 
@@ -16,7 +16,7 @@ async function bootstrap() {
     .addTag('wildlife')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, documentFactory);
+  SwaggerModule.setup(`${API_PREFIX}/docs`, app, documentFactory);
 
   await app.listen(process.env.PORT ?? 3000);
 }

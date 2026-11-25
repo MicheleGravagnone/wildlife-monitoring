@@ -6,23 +6,29 @@ The API currently exposes unauthenticated `GET /<resource>`, `GET /<resource>/:i
 
 Responses currently serialize full Prisma records, including `imageKey` for detections. Dates serialize as ISO 8601 strings. Classification input and output use Prisma enum names: `IDENTIFIED`, `UNKNOWN`, and `NO_ANIMAL`; the lowercase values in the domain model are database mappings.
 
-Swagger UI is served at `/api`; resource routes do not have an `/api` prefix. There is no root greeting route.
+Resource routes are versioned in the URI under `/api/v1` (for example `GET /api/v1/v1/sensors`); unprefixed paths return `404`. Swagger UI is served at `/api/docs`. There is no root greeting route.
+
+### Versioning policy
+
+- Changes within `v1` are additive only: new endpoints, new optional request fields, and new response fields. Fields are never renamed, removed, or retyped within a version.
+- A breaking change ships as a new version (`/api/v2/...`) for the affected routes only, while `v1` keeps serving existing clients. This matters most for ESP32 firmware, which cannot be updated as easily as the web frontend.
+- A version is retired only after logs show no remaining callers.
 
 ## API endpoints
 
 The API will expose the following endpoints:
 
-- `GET /api/sensors`: lists physical Sensors; user authentication required.
-- `GET /api/sensors/:id`: returns a physical Sensor; user authentication required.
-- `GET /api/detections`: lists detections using the public or authenticated response view, depending on the caller's session.
-- `GET /api/detections/:id`: returns a detection using the appropriate response view. Records excluded from the public view return `404` to unauthenticated callers.
-- `GET /api/detections/:id/image`: returns a short-lived image URL; user authentication required. Returns `404` if no image is available.
-- `GET /api/deployments`: lists Deployments; user authentication required.
-- `GET /api/deployments/:id`: returns a Deployment; user authentication required.
-- `POST /api/deployments`: registers a new immutable installation for an existing Sensor; provisioning service credentials required.
-- `POST /api/sensors`: registers a new immutable physical Sensor; provisioning service credentials required.
-- `POST /api/captures`: accepts raw captured image uploads (multipart/form-data) with capture metadata (`eventId`, `deploymentId`, `capturedAt`); persists to object storage, enqueues an inference task to RabbitMQ, and returns `202 Accepted`; ingestion service credentials required.
-- `POST /api/detections`: creates an immutable classified capture event directly; ingestion service credentials required. In the asynchronous capture workflow, this persistence step is handled internally by consuming the `detections.classified` queue.
+- `GET /api/v1/sensors`: lists physical Sensors; user authentication required.
+- `GET /api/v1/sensors/:id`: returns a physical Sensor; user authentication required.
+- `GET /api/v1/detections`: lists detections using the public or authenticated response view, depending on the caller's session.
+- `GET /api/v1/detections/:id`: returns a detection using the appropriate response view. Records excluded from the public view return `404` to unauthenticated callers.
+- `GET /api/v1/detections/:id/image`: returns a short-lived image URL; user authentication required. Returns `404` if no image is available.
+- `GET /api/v1/deployments`: lists Deployments; user authentication required.
+- `GET /api/v1/deployments/:id`: returns a Deployment; user authentication required.
+- `POST /api/v1/deployments`: registers a new immutable installation for an existing Sensor; provisioning service credentials required.
+- `POST /api/v1/sensors`: registers a new immutable physical Sensor; provisioning service credentials required.
+- `POST /api/v1/captures`: accepts raw captured image uploads (multipart/form-data) with capture metadata (`eventId`, `deploymentId`, `capturedAt`); persists to object storage, enqueues an inference task to RabbitMQ, and returns `202 Accepted`; ingestion service credentials required.
+- `POST /api/v1/detections`: creates an immutable classified capture event directly; ingestion service credentials required. In the asynchronous capture workflow, this persistence step is handled internally by consuming the `detections.classified` queue.
 
 There are no `PUT`, `PATCH`, or `DELETE` endpoints for sensors, deployments, or detections.
 
