@@ -2,7 +2,7 @@
 
 A NestJS REST API for wildlife observations from ESP32 camera and PIR sensors in parks around Łódź, Poland. Developed for the Research Based Workshop, AY 2026/27.
 
-The domain separates physical **sensors**, fixed **deployments**, and classified **detections**, preserving observation locations when a sensor moves. This repository contains the backend; device capture, cloud inference, and the frontend belong to the wider project.
+The domain separates physical **sensors**, fixed **deployments**, and classified **detections**, preserving observation locations when a sensor moves. The backend coordinates asynchronous photo capture ingestion with an external AI vision inference service via **RabbitMQ** before persisting immutable observations to PostgreSQL.
 
 ## Current scope
 
@@ -11,9 +11,19 @@ The domain separates physical **sensors**, fixed **deployments**, and classified
 - Request validation and Swagger UI.
 - Vitest unit tests and database-backed HTTP end-to-end tests.
 
-Authentication and public response filtering are still planned. Current routes expose full database records. See [API contract and status](docs/api-contract.md) and [domain model](docs/domain-model.md) for the distinction between implemented and intended behavior.
+Authentication, public response filtering, and asynchronous RabbitMQ pipeline integration are planned. Current routes expose full database records. See [API contract and status](docs/api-contract.md) and [domain model](docs/domain-model.md) for more details.
 
-PlantUML diagrams distinguish implemented behavior from planned architecture in [docs/diagrams](docs/diagrams/README.md).
+## Architecture
+
+The target system, sketched by hand. ESP32 traps and browsers reach the backend through NGINX over HTTPS. The backend stores images in object storage and publishes captures to RabbitMQ. The AI service consumes them, reads each image by key, and publishes classifications back. Failed messages go to a dead-letter queue that the backend consumes.
+
+![Logical architecture: ESP32 and browser connect over HTTPS to NGINX, which forwards to the backend; the backend stores data in PostgreSQL and images in object storage, pushes captures to a RabbitMQ queue consumed by the AI service, which reads images by key and pushes classifications to a second queue consumed by the backend; both queues dead-letter to a DLQ consumed by the backend](docs/diagrams/architecture-logical.png)
+
+Planned AWS deployment: the same services run with Docker Compose on one EC2 instance in a public subnet. S3 replaces object storage, an IAM instance role grants bucket access, and secrets live in SSM Parameter Store.
+
+![AWS deployment: DNS record and Elastic IP lead through a security group to an EC2 instance running Docker Compose with NGINX, the NestJS backend, the Python AI service, RabbitMQ, and PostgreSQL on EBS; the backend and AI service access a private S3 bucket through an IAM instance role, and secrets are read from SSM Parameter Store](docs/diagrams/architecture-aws.png)
+
+UI wireframes for the public overview and the logged-in live map are in [docs/wireframes](docs/wireframes/ui-wireframes.png).
 
 ## Run locally
 
@@ -50,7 +60,7 @@ src/
   prisma/                 Shared database provider and lifecycle
 prisma/                   Schema and versioned migrations
 test/                     HTTP tests and shared test support
-docs/                     Domain rules and API implementation status
+docs/                     Domain rules, API contracts, and architecture decisions
 examples/                 HTTP requests for manual exploration
 ```
 
@@ -81,6 +91,8 @@ Adjust the username, password, and port in `TEST_DATABASE_URL` if you changed th
 ## Next milestones
 
 - Service credentials and user authentication.
+- Asynchronous capture ingestion and AI inference integration via RabbitMQ (AMQP).
+- Object storage (S3/MinIO) integration for raw photo storage and presigned image URLs.
 - Public and authenticated response views and private image access.
 - Idempotent ingestion and cross-field domain validation.
-- Pagination
+- Pagination.
