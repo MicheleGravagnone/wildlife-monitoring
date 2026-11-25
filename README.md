@@ -44,6 +44,8 @@ Alternatively, to run the entire backend containerized:
 docker compose --profile app up --build
 ```
 
+This also starts the AI worker (`services/ai`), currently a placeholder that logs a heartbeat. It publishes no ports; follow it with `docker compose logs -f ai`.
+
 The `.env.example` values match the Compose database. The API is available at <http://localhost:3000>; Swagger UI is at <http://localhost:3000/api/docs>. Resource routes are versioned under `/api/v1`: `/api/v1/sensors`, `/api/v1/deployments`, and `/api/v1/detections`. To stop PostgreSQL, run `docker compose down`; its data remains in the Compose volume.
 
 If port 5432 is already in use, change the published port in `compose.yaml` and the port in `DATABASE_URL` in `.env` to match. For local schema development, run `npm run db:migrate -- --name <migration-name>` to create and apply a migration. `npm run db:generate` regenerates the Prisma Client when needed; generated code lives in `apps/api/src/generated/prisma/` and is ignored by Git.

@@ -1,0 +1,17 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+**/*.md
+docs
+services/ai/examples
+services/ai/test
+.prettier*
+__pycache__
+**/.pytest_cache/
+.venv/
+**/.pybuilder/
+**/.pyenv/
+**/.pypackages/
+**/.uv/

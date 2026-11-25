@@ -29,5 +29,10 @@ services:
       db:
         condition: service_healthy
 
+  ai:
+    build:
+      context: services/ai
+    profiles: ["app", "full"]
+
 volumes:
   postgres_data:
