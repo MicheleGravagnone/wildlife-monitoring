@@ -5,10 +5,7 @@
 !.env.example
 **/*.md
 docs
-services/ai/examples
-services/ai/test
-.prettier*
-__pycache__
+**/__pycache__
 **/.pytest_cache/
 .venv/
 **/.pybuilder/
