@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0B1711" />
+    <meta
+      name="description"
+      content="Trop: wildlife sightings from camera traps in the parks of Łódź."
+    />
+    <title>Trop — wildlife monitor · Łódź</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #0b1711;
+      }
+      .boot {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+      }
+      .boot-mark {
+        position: relative;
+        width: 84px;
+        height: 84px;
+      }
+      .boot-mark img {
+        position: absolute;
+        inset: 4%;
+        width: 92%;
+        height: 92%;
+        object-fit: contain;
+        animation: boot-breathe 2.2s ease-in-out infinite;
+      }
+      .boot-arc {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: conic-gradient(
+          from 0deg,
+          rgba(190, 227, 201, 0) 0deg,
+          rgba(190, 227, 201, 0.7) 300deg,
+          rgba(190, 227, 201, 0) 360deg
+        );
+        -webkit-mask-image: radial-gradient(
+          farthest-side,
+          transparent calc(100% - 2px),
+          #000 calc(100% - 2px)
+        );
+        mask-image: radial-gradient(
+          farthest-side,
+          transparent calc(100% - 2px),
+          #000 calc(100% - 2px)
+        );
+        animation: boot-spin 1.6s linear infinite;
+      }
+      .boot-label {
+        font:
+          10px/1 ui-monospace,
+          monospace;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #9fb5a8;
+      }
+      @keyframes boot-breathe {
+        0%,
+        100% {
+          transform: scale(0.92);
+          opacity: 0.55;
+        }
+        50% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-mark img,
+        .boot-arc {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="boot" role="status" aria-live="polite">
+        <span class="boot-mark">
+          <span class="boot-arc"></span>
+          <img src="/assets/logo.png" alt="" />
+        </span>
+        <span class="boot-label">Loading Trop</span>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

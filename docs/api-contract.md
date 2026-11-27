@@ -1,5 +1,7 @@
 # API contract and implementation status
 
+The machine-readable contract for implemented and planned routes is [openapi.yaml](openapi.yaml). Each operation is marked `x-status: implemented` or `x-status: planned`.
+
 ## Implemented
 
 The API currently exposes unauthenticated `GET /<resource>`, `GET /<resource>/:id`, and `POST /<resource>` for `sensors`, `deployments`, and `detections`. Records persist in PostgreSQL through Prisma. Unknown lookup IDs return `404`; malformed UUIDs and invalid DTOs return `400`. Unknown input properties are rejected. Unique constraint violations on creation return `409`.

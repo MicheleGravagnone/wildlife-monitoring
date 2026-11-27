@@ -9,17 +9,18 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w @wildlife-monitor/api",
-    "typecheck": "npm run typecheck -w @wildlife-monitor/api",
-    "lint": "npm run lint -w @wildlife-monitor/api",
-    "test": "npm run test -w @wildlife-monitor/api",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "test:e2e": "npm run test:e2e -w @wildlife-monitor/api",
     "start:dev": "npm run start:dev -w @wildlife-monitor/api",
+    "dev:web": "npm run dev -w @wildlife-monitor/web",
     "db:generate": "npm run db:generate -w @wildlife-monitor/api",
     "db:migrate": "npm run db:migrate -w @wildlife-monitor/api --",
     "db:migrate:deploy": "npm run db:migrate:deploy -w @wildlife-monitor/api",
-    "format": "prettier --write \"apps/*/{src,test}/**/*.ts\" \"apps/*/*.{ts,json}\" \"*.json\" \"docs/**/*.md\" README.md",
-    "format:check": "prettier --check \"apps/*/{src,test}/**/*.ts\" \"apps/*/*.{ts,json}\" \"*.json\" \"docs/**/*.md\" README.md"
+    "format": "prettier --write \"apps/*/{src,test}/**/*.{ts,tsx,css}\" \"apps/*/*.{ts,json,html}\" \"*.json\" \"docs/**/*.md\" README.md",
+    "format:check": "prettier --check \"apps/*/{src,test}/**/*.{ts,tsx,css}\" \"apps/*/*.{ts,json,html}\" \"*.json\" \"docs/**/*.md\" README.md"
   },
   "devDependencies": {
     "prettier": "^3.4.2"

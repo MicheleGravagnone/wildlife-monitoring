@@ -46,7 +46,7 @@ A Deployment records one fixed installation of a Sensor. A Sensor can have multi
 | `installedAt` | timestamp | Yes       | When this deployment was installed.         |
 | `createdAt`   | timestamp | Generated | When the backend registered the deployment. |
 
-All Deployment fields require user authentication to read. Public map coordinates are returned through Detection responses. Deployment creation requires an existing Sensor; Sensor deletion is restricted while deployments reference it and Deployment deletion is restricted while detections reference it.
+All Deployment fields require user authentication to read. Coordinates are never exposed publicly, not even rounded or aggregated, because any location derived from a deployment reveals where a camera is. Deployment creation requires an existing Sensor; Sensor deletion is restricted while deployments reference it and Deployment deletion is restricted while detections reference it.
 
 ### Detection
 
@@ -76,9 +76,9 @@ Rules:
 
 ### Response views
 
-Public detection responses contain only `id`, `capturedAt`, `speciesLabel`, and deployment `latitude`/`longitude` resolved from the referenced Deployment. Only `identified` detections appear in the public map and public detection endpoints.
+Public detection responses contain only `id`, `capturedAt`, `speciesLabel`, the `parkName` of the referenced Deployment, and a derived `timeOfDay` (`dawn`, `day`, `dusk` or `night`, from sunrise and sunset in Łódź on the capture date). They contain no coordinates; public maps place sightings by park using the frontend's own park reference data. Only `identified` detections appear in public detection and statistics endpoints.
 
-Authenticated detection responses include all Detection fields except `imageKey`, plus the deployment location and park name. Authenticated users can also retrieve Sensor and Deployment details and an image URL when an image exists. They can read `unknown` and `no_animal` records for additional context.
+Authenticated detection responses include all Detection fields except `imageKey`, plus the deployment location, deployment name, park name, sensor ID, device ID, `timeOfDay`, and whether an image exists. Authenticated users can also retrieve Sensor and Deployment details and an image URL when an image exists. They can read `unknown` and `no_animal` records for additional context.
 
 ## Ingestion and inference pipeline
 
