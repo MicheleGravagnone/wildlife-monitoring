@@ -8,6 +8,8 @@ npm-debug.log
 .env.*
 !.env.example
 **/*.md
+# Served by the web app, so it must reach the image.
+!apps/web/public/assets/CREDITS.md
 docs
 apps/api/examples
 apps/api/test

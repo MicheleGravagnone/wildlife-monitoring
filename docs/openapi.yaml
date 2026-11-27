@@ -1,0 +1,1545 @@
+openapi: 3.1.0
+info:
+  title: Wildlife Monitor API
+  version: 1.0.0
+  summary: Wildlife observations from ESP32 camera and PIR sensors in parks around Łódź.
+  description: |
+    Contract-first specification for the Wildlife Monitor REST API. It covers
+    both the implemented routes and the planned ones, so the web frontend can
+    be built against the full contract. Each operation's `x-status` is
+    `implemented` or `planned`. See `docs/api-contract.md` and
+    `docs/domain-model.md` for the domain rules.
+
+    ## Conventions
+    - All routes are under `/api/v1`. Changes within `v1` are additive only.
+    - IDs are UUIDs. Timestamps are ISO 8601 strings in UTC.
+    - Coordinates are WGS84 decimal degrees.
+    - `null` means the value is unavailable.
+    - Request bodies reject unknown properties.
+    - Sensors, deployments and detections are immutable. There are no
+      `PUT`, `PATCH` or `DELETE` routes.
+
+    ## Callers and credentials
+    - **Visitors** (no session) read the public detection view and the public
+      statistics.
+    - **Users** sign in through `/auth/login` and receive an HTTP-only session
+      cookie. A session grants read access only. The browser must send
+      requests with credentials (`fetch(url, { credentials: 'include' })`).
+    - **Services** (provisioning tool, ESP32 ingestion) use a bearer token.
+      A user session never grants access to creation routes.
+
+    ## Response views
+    Detection routes return the **public view** to visitors and the
+    **authenticated view** to users. The public view lists only
+    `IDENTIFIED` detections. Public statistics also count only `IDENTIFIED`
+    detections.
+
+    **No public route returns coordinates**, not even rounded or
+    aggregated ones, because any location derived from deployments reveals
+    where a camera is. Public responses locate sightings by `parkName` only.
+    The frontend places parks on its maps from its own static park
+    reference data.
+
+    ## Lists
+    List routes are page-based and return `{ items, page, pageSize, total }`.
+    Pages start at 1. The Journal needs `total` for its page dots and
+    result count, and sorting by species or score rules out cursors.
+
+    ## Time of day
+    `timeOfDay` is computed from the sun's position in Łódź on the capture
+    date, so it follows the seasons:
+    - `dawn`: from 1 h before to 1 h after sunrise
+    - `day`: between dawn and dusk
+    - `dusk`: from 1 h before to 1 h after sunset
+    - `night`: everything else
+  license:
+    name: UNLICENSED
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development
+tags:
+  - name: auth
+    description: User sessions for the web frontend.
+  - name: detections
+    description: Classified capture events. Public or authenticated view depending on the session.
+  - name: stats
+    description: Public aggregates for the overview page. Counts only IDENTIFIED detections.
+  - name: sensors
+    description: Physical ESP32 devices. Users only.
+  - name: deployments
+    description: Fixed installations of a sensor. Users only.
+  - name: ingestion
+    description: Service-only routes used by the ESP32 and provisioning tools.
+  - name: system
+    description: Service health.
+
+paths:
+  # ---------------------------------------------------------------- auth
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      x-status: planned
+      summary: Sign in
+      description: Starts a session and sets the `wm_session` cookie.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Signed in.
+          headers:
+            Set-Cookie:
+              description: '`wm_session=<opaque>; HttpOnly; Secure; SameSite=Lax; Path=/api`'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401':
+          description: Wrong email or password. The message does not reveal which.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      x-status: planned
+      summary: Sign out
+      description: Ends the session and clears the cookie. Succeeds even without a session.
+      security: []
+      responses:
+        '204':
+          description: Signed out.
+
+  /auth/me:
+    get:
+      tags: [auth]
+      operationId: getCurrentUser
+      x-status: planned
+      summary: Current user
+      description: |
+        Returns the signed-in user. The frontend calls this on load to choose
+        between the guest navigation and the logged-in navigation.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The signed-in user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------- detections
+  /detections:
+    get:
+      tags: [detections]
+      operationId: listDetections
+      x-status: implemented
+      x-planned-changes: |
+        Implemented today without authentication, filters or pagination: it
+        returns a bare array of full database records, including `imageKey`.
+        The response views, filters and page envelope below are planned.
+      summary: List detections
+      description: |
+        Visitors receive `PublicDetectionPage` with `IDENTIFIED` detections
+        only. Users receive `DetectionPage`.
+
+        Used by:
+        - the Field Journal (all filters, `sort`, pages)
+        - the Overview spotlight (`pageSize=5`)
+        - the live map's initial list (`from` = now minus the window)
+        - night replay (`from` = sunset, `to` = sunrise, `sort=oldest`,
+          `pageSize=500`)
+
+        Staff-only parameters are ignored for visitors.
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - name: q
+          in: query
+          description: |
+            Free-text search. It matches species labels as a
+            case-insensitive substring. For staff it also matches a sensor
+            `deviceId`, or a detection `id` or `eventId` prefix.
+          schema: { type: string, minLength: 1, maxLength: 100 }
+        - name: species
+          in: query
+          description: Exact species label. Repeat to match several.
+          schema:
+            type: array
+            items: { type: string }
+          style: form
+          explode: true
+        - name: parkName
+          in: query
+          schema: { type: string }
+        - name: timeOfDay
+          in: query
+          description: Repeat to match several.
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/TimeOfDay' }
+          style: form
+          explode: true
+        - name: deploymentId
+          in: query
+          description: Staff only.
+          schema: { type: string, format: uuid }
+        - name: sensorId
+          in: query
+          description: Staff only.
+          schema: { type: string, format: uuid }
+        - name: classificationStatus
+          in: query
+          description: Staff only. Visitors always get `IDENTIFIED`. Repeat to match several.
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/ClassificationStatus' }
+          style: form
+          explode: true
+        - name: minConfidence
+          in: query
+          description: Staff only. Excludes detections with a `null` confidence.
+          schema: { type: number, minimum: 0, maximum: 1 }
+        - name: sort
+          in: query
+          description: |
+            `newest` and `oldest` sort by `capturedAt`. `species` sorts by
+            `speciesLabel` A–Z, then newest. `confidence` (staff only) sorts
+            highest first, then newest.
+          schema:
+            type: string
+            enum: [newest, oldest, species, confidence]
+            default: newest
+        - $ref: '#/components/parameters/Page'
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500, default: 24 }
+      responses:
+        '200':
+          description: One page of detections.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PublicDetectionPage'
+                  - $ref: '#/components/schemas/DetectionPage'
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+    post:
+      tags: [ingestion]
+      operationId: createDetection
+      x-status: implemented
+      x-planned-changes: Service authentication and idempotent retries are planned.
+      summary: Create a classified detection
+      description: |
+        Stores an immutable classified capture event. In the asynchronous
+        pipeline the backend does this itself by consuming the
+        `detections.classified` queue; this route is for direct ingestion.
+
+        Retrying the same `eventId` with identical input returns the existing
+        record with `200`. Reusing it with different input returns `409`.
+      security:
+        - serviceToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateDetectionRequest' }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Detection' }
+        '200':
+          description: Identical retry of an existing `eventId`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Detection' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422':
+          description: The deployment does not exist, or `capturedAt` precedes its `installedAt`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /detections/stream:
+    get:
+      tags: [detections]
+      operationId: streamDetections
+      x-status: planned
+      summary: Live detection stream
+      description: |
+        Server-Sent Events for the live map. Each new detection is sent as an
+        event named `detection` whose `data` is a JSON `Detection`. The server
+        sends a `: ping` comment every 25 seconds to keep proxies open.
+
+        Use `new EventSource(url, { withCredentials: true })`. After a
+        reconnect the browser sends `Last-Event-ID`, and the server replays
+        detections stored after that event.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: Last-Event-ID
+          in: header
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Event stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: |
+                id: 3f6c2a0e-6f0b-4b51-9a5e-1f2b8c7d9e10
+                event: detection
+                data: {"id":"3f6c2a0e-6f0b-4b51-9a5e-1f2b8c7d9e10","capturedAt":"2026-11-27T05:41:12.000Z", ...}
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /detections/{id}:
+    get:
+      tags: [detections]
+      operationId: getDetection
+      x-status: implemented
+      x-planned-changes: Response views are planned. Today it returns the full database record.
+      summary: Get a detection
+      description: |
+        Returns the public view to visitors and the authenticated view to
+        users. Detections outside the public view return `404` to visitors.
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The detection.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PublicDetection'
+                  - $ref: '#/components/schemas/Detection'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /detections/{id}/image:
+    get:
+      tags: [detections]
+      operationId: getDetectionImageUrl
+      x-status: planned
+      summary: Get a short-lived image URL
+      description: |
+        Resolves the detection's private storage key to a presigned URL. Use
+        the URL directly as an `<img src>`. Do not cache it past `expiresAt`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Presigned URL.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImageUrl' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: The detection does not exist or has no image.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # --------------------------------------------------------------- stats
+  /stats/summary:
+    get:
+      tags: [stats]
+      operationId: getStatsSummary
+      x-status: planned
+      summary: Headline numbers
+      description: Totals for the overview's stats strip.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Summary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StatsSummary' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /stats/species:
+    get:
+      tags: [stats]
+      operationId: getSpeciesStats
+      x-status: planned
+      summary: Per-species sightings
+      description: |
+        One entry per species, sorted by `sightings` descending. Feeds the
+        "Park animals" section and the animal hover card (sightings count and
+        hourly graph).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - name: parkName
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/TimeZone'
+      responses:
+        '200':
+          description: Species statistics.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/SpeciesStats' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /stats/parks:
+    get:
+      tags: [stats]
+      operationId: getParkStats
+      x-status: planned
+      summary: Per-park sightings
+      description: |
+        One entry per park that has at least one deployment, including
+        parks with zero sightings in range. Feeds the Journal park dropdown,
+        the Overview heatmap and park bubbles, and the park header.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - name: species
+          in: query
+          schema:
+            type: array
+            items: { type: string }
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: Park statistics, sorted by name.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/ParkStats' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /stats/daily:
+    get:
+      tags: [stats]
+      operationId: getDailyActivity
+      x-status: planned
+      summary: Sightings per day
+      description: |
+        One bucket per calendar day in `tz`, oldest first, including empty
+        days and today. Feeds the Journal's 30-day strip.
+      security: []
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 90, default: 30 }
+        - name: species
+          in: query
+          schema:
+            type: array
+            items: { type: string }
+          style: form
+          explode: true
+        - name: parkName
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/TimeZone'
+      responses:
+        '200':
+          description: Daily histogram.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DailyActivity' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /stats/hourly-activity:
+    get:
+      tags: [stats]
+      operationId: getHourlyActivity
+      x-status: planned
+      summary: Sightings by hour of day
+      description: |
+        Always 24 buckets, hours 0 to 23 in `tz`, including empty hours.
+        Feeds the overview's hourly activity section.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - name: species
+          in: query
+          schema:
+            type: array
+            items: { type: string }
+          style: form
+          explode: true
+        - name: parkName
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/TimeZone'
+      responses:
+        '200':
+          description: Hourly histogram.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HourlyActivity' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  # ------------------------------------------------------------- sensors
+  /sensors:
+    get:
+      tags: [sensors]
+      operationId: listSensors
+      x-status: implemented
+      x-planned-changes: Authentication, pagination and the page envelope are planned. Today it returns a bare array.
+      summary: List sensors
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: One page of sensors, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SensorPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [ingestion]
+      operationId: createSensor
+      x-status: implemented
+      x-planned-changes: Service authentication is planned.
+      summary: Register a sensor
+      security:
+        - serviceToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSensorRequest' }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sensor' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: '`deviceId` is already registered.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /sensors/health:
+    get:
+      tags: [sensors]
+      operationId: listSensorHealth
+      x-status: planned
+      summary: Health of every sensor
+      description: |
+        One entry per sensor, joining its current deployment, latest
+        heartbeat and today's capture count. Feeds the Sensors page cards and
+        the status filter chips.
+
+        Telemetry lives in separate immutable heartbeat records, not on the
+        Sensor, so the Sensor stays immutable.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/SensorStatus' }
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: Sensor health, unhealthy first, then by park.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/SensorHealth' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /sensors/{id}/health:
+    get:
+      tags: [sensors]
+      operationId: getSensorHealth
+      x-status: planned
+      summary: Health of one sensor
+      description: The card data plus a 24-hour battery series for the detail drawer.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Sensor health detail.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SensorHealthDetail' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /heartbeats:
+    post:
+      tags: [ingestion]
+      operationId: createHeartbeat
+      x-status: planned
+      x-unconfirmed: Depends on ESP32 firmware support, which is not agreed yet.
+      summary: Report sensor telemetry
+      description: |
+        **Unconfirmed.** This route depends on ESP32 firmware support, which
+        is not agreed yet. Until heartbeats exist, sensor health reports
+        status `unknown`, `lastHeartbeat: null` and no alerts. The Sensors
+        page must render that state.
+
+        Sent by each ESP32 periodically, for example every 5 minutes. Stored as an
+        immutable record. A sensor counts as `offline` after 30 minutes
+        without a heartbeat.
+      security:
+        - serviceToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateHeartbeatRequest' }
+      responses:
+        '204':
+          description: Stored.
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: Unknown `deviceId`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /sensors/{id}:
+    get:
+      tags: [sensors]
+      operationId: getSensor
+      x-status: implemented
+      x-planned-changes: Authentication is planned.
+      summary: Get a sensor
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The sensor.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sensor' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --------------------------------------------------------- deployments
+  /deployments:
+    get:
+      tags: [deployments]
+      operationId: listDeployments
+      x-status: implemented
+      x-planned-changes: Authentication, the `sensorId` filter, pagination and the page envelope are planned. Today it returns a bare array.
+      summary: List deployments
+      description: Filter by `sensorId` to show a sensor's installation history.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: sensorId
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: One page of deployments, most recently installed first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeploymentPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [ingestion]
+      operationId: createDeployment
+      x-status: implemented
+      x-planned-changes: Service authentication and the `422` for an unknown sensor are planned.
+      summary: Register a deployment
+      security:
+        - serviceToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateDeploymentRequest' }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deployment' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: The sensor does not exist.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /deployments/{id}:
+    get:
+      tags: [deployments]
+      operationId: getDeployment
+      x-status: implemented
+      x-planned-changes: Authentication is planned.
+      summary: Get a deployment
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The deployment.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deployment' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------------------------------------------ captures
+  /captures:
+    post:
+      tags: [ingestion]
+      operationId: uploadCapture
+      x-status: planned
+      summary: Upload a raw capture
+      description: |
+        Called by the ESP32. Stores the image, publishes a job to
+        `captures.raw` and returns at once. Classification happens
+        asynchronously; the detection appears later.
+
+        Retrying the same `eventId` returns `202` again without a second job.
+      security:
+        - serviceToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [eventId, deploymentId, capturedAt, image]
+              properties:
+                eventId: { type: string, format: uuid }
+                deploymentId: { type: string, format: uuid }
+                capturedAt: { type: string, format: date-time }
+                image:
+                  type: string
+                  contentMediaType: image/jpeg
+                  description: JPEG, at most 5 MB.
+      responses:
+        '202':
+          description: Accepted for classification.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureAccepted' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413':
+          description: Image too large.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: The deployment does not exist, or `capturedAt` precedes its `installedAt`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # -------------------------------------------------------------- system
+  /system/pipeline:
+    get:
+      tags: [system]
+      operationId: getPipelineStatus
+      x-status: planned
+      summary: Capture pipeline status
+      description: |
+        Feeds the System page: queue depths and consumers, hourly throughput,
+        inference latency, storage use and the active model version. Poll it
+        every 10 s while the page is open.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Pipeline snapshot.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /system/dead-letters:
+    get:
+      tags: [system]
+      operationId: listDeadLetters
+      x-status: planned
+      summary: Dead-lettered captures
+      description: |
+        Messages that reached `captures.dlq`. The backend consumes the DLQ
+        and stores each message as a record, so it can list them without
+        touching the queue. Newest first.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: One page of dead letters.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeadLetterPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      x-status: planned
+      summary: Liveness check
+      description: For load balancers and Compose health checks. Public.
+      security: []
+      responses:
+        '200':
+          description: All components are up.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+        '503':
+          description: At least one component is down.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: wm_session
+      description: HTTP-only session cookie set by `/auth/login`. Read-only access.
+    serviceToken:
+      type: http
+      scheme: bearer
+      description: Credential for provisioning and ingestion services. Never issued to users.
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      description: Resource UUID. A malformed UUID returns `400`.
+      schema: { type: string, format: uuid }
+    From:
+      name: from
+      in: query
+      description: Inclusive lower bound on `capturedAt`.
+      schema: { type: string, format: date-time }
+    To:
+      name: to
+      in: query
+      description: Exclusive upper bound on `capturedAt`.
+      schema: { type: string, format: date-time }
+    Page:
+      name: page
+      in: query
+      description: 1-based page number. A page past the end returns empty `items`.
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    TimeZone:
+      name: tz
+      in: query
+      description: IANA time zone for hour-of-day buckets.
+      schema: { type: string, default: Europe/Warsaw }
+
+  responses:
+    BadRequest:
+      description: Malformed parameter or invalid body.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing or invalid credentials.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: No such resource, or not visible to the caller.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: The `eventId` already exists with different data. The existing record is unchanged.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: Too many attempts. Retry after the `Retry-After` header's seconds.
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    # ------------------------------------------------------------ shared
+    Error:
+      description: NestJS default error body.
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode: { type: integer, examples: [404] }
+        message:
+          description: A message, or one message per validation issue.
+          oneOf:
+            - type: string
+            - type: array
+              items: { type: string }
+        error: { type: string, examples: [Not Found] }
+
+    ClassificationStatus:
+      type: string
+      enum: [IDENTIFIED, UNKNOWN, NO_ANIMAL]
+
+    PageMeta:
+      type: object
+      required: [page, pageSize, total]
+      properties:
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1 }
+        total:
+          {
+            type: integer,
+            minimum: 0,
+            description: Matching records across all pages.,
+          }
+
+    TimeOfDay:
+      type: string
+      enum: [dawn, day, dusk, night]
+      description: See "Time of day" in the API description.
+
+    # -------------------------------------------------------------- auth
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1, format: password }
+
+    User:
+      type: object
+      required: [id, name, surname, email, role]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        surname: { type: string }
+        email: { type: string, format: email }
+        role:
+          type: string
+          enum: [DEVELOPER, ADMINISTRATOR]
+          description: Both roles are read-only in the API.
+
+    # -------------------------------------------------------- detections
+    PublicDetection:
+      description: |
+        Visitor view. Only `IDENTIFIED` detections. No coordinates: the UI
+        shows "near <park>".
+      type: object
+      required: [id, capturedAt, speciesLabel, parkName, timeOfDay]
+      properties:
+        id: { type: string, format: uuid }
+        capturedAt: { type: string, format: date-time }
+        speciesLabel: { type: string, examples: [Red fox] }
+        parkName: { type: string, examples: [Las Łagiewnicki] }
+        timeOfDay: { $ref: '#/components/schemas/TimeOfDay' }
+
+    Detection:
+      description: |
+        Authenticated view. Every stored field except `imageKey`, plus the
+        deployment's location and park.
+      type: object
+      required:
+        - id
+        - eventId
+        - deploymentId
+        - capturedAt
+        - classificationStatus
+        - speciesLabel
+        - confidence
+        - hasImage
+        - modelVersion
+        - classifiedAt
+        - createdAt
+        - latitude
+        - longitude
+        - parkName
+        - deploymentName
+        - sensorId
+        - deviceId
+        - timeOfDay
+      properties:
+        id: { type: string, format: uuid }
+        eventId: { type: string, format: uuid }
+        deploymentId: { type: string, format: uuid }
+        capturedAt: { type: string, format: date-time }
+        classificationStatus:
+          { $ref: '#/components/schemas/ClassificationStatus' }
+        speciesLabel:
+          type: [string, 'null']
+          description: Set only when `IDENTIFIED`.
+        confidence:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 1
+          description: Model score for `speciesLabel`; not a calibrated probability. Set only when `IDENTIFIED`.
+        hasImage:
+          type: boolean
+          description: Whether `/detections/{id}/image` will return a URL.
+        modelVersion: { type: string }
+        classifiedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        parkName: { type: string }
+        deploymentName: { type: string, examples: [Pond trail] }
+        sensorId: { type: string, format: uuid }
+        deviceId: { type: string, examples: [esp32-cam-07] }
+        timeOfDay: { $ref: '#/components/schemas/TimeOfDay' }
+
+    PublicDetectionPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/PublicDetection' }
+
+    DetectionPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/Detection' }
+
+    CreateDetectionRequest:
+      description: |
+        `IDENTIFIED` requires `speciesLabel` and `confidence`. `UNKNOWN` and
+        `NO_ANIMAL` require both to be `null`. `classifiedAt` must not
+        precede `capturedAt`.
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required:
+            [
+              eventId,
+              deploymentId,
+              capturedAt,
+              classificationStatus,
+              speciesLabel,
+              confidence,
+              modelVersion,
+              classifiedAt,
+            ]
+          properties:
+            eventId: { type: string, format: uuid }
+            deploymentId: { type: string, format: uuid }
+            capturedAt: { type: string, format: date-time }
+            classificationStatus: { const: IDENTIFIED }
+            speciesLabel: { type: string, minLength: 1 }
+            confidence: { type: number, minimum: 0, maximum: 1 }
+            imageKey: { type: [string, 'null'], minLength: 1 }
+            modelVersion: { type: string, minLength: 1 }
+            classifiedAt: { type: string, format: date-time }
+        - type: object
+          additionalProperties: false
+          required:
+            [
+              eventId,
+              deploymentId,
+              capturedAt,
+              classificationStatus,
+              speciesLabel,
+              confidence,
+              modelVersion,
+              classifiedAt,
+            ]
+          properties:
+            eventId: { type: string, format: uuid }
+            deploymentId: { type: string, format: uuid }
+            capturedAt: { type: string, format: date-time }
+            classificationStatus: { enum: [UNKNOWN, NO_ANIMAL] }
+            speciesLabel: { type: 'null' }
+            confidence: { type: 'null' }
+            imageKey: { type: [string, 'null'], minLength: 1 }
+            modelVersion: { type: string, minLength: 1 }
+            classifiedAt: { type: string, format: date-time }
+      discriminator:
+        propertyName: classificationStatus
+
+    ImageUrl:
+      type: object
+      required: [url, expiresAt]
+      properties:
+        url: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+
+    # ------------------------------------------------------------- stats
+    StatsSummary:
+      type: object
+      required: [sightings, species, parks, activeDeployments, lastSightingAt]
+      properties:
+        sightings:
+          {
+            type: integer,
+            minimum: 0,
+            description: IDENTIFIED detections in range.,
+          }
+        species:
+          { type: integer, minimum: 0, description: Distinct species in range. }
+        parks:
+          {
+            type: integer,
+            minimum: 0,
+            description: Distinct parks with at least one deployment.,
+          }
+        activeDeployments:
+          type: integer
+          minimum: 0
+          description: Deployments that are each sensor's latest installation.
+        lastSightingAt: { type: [string, 'null'], format: date-time }
+
+    SpeciesStats:
+      type: object
+      required:
+        [speciesLabel, sightings, firstSeenAt, lastSeenAt, topPark, hourly]
+      properties:
+        speciesLabel: { type: string, examples: [Red fox] }
+        sightings: { type: integer, minimum: 1 }
+        firstSeenAt: { type: string, format: date-time }
+        lastSeenAt: { type: string, format: date-time }
+        topPark:
+          type: string
+          description: Park with the most sightings of this species in range.
+        hourly:
+          description: Sightings per hour of day, index 0 = 00:00–00:59 in `tz`.
+          type: array
+          items: { type: integer, minimum: 0 }
+          minItems: 24
+          maxItems: 24
+
+    ParkStats:
+      description: No coordinates; the frontend places parks from static reference data keyed by `parkName`.
+      type: object
+      required: [parkName, sightings, species, lastSightingAt, lastSpeciesLabel]
+      properties:
+        parkName: { type: string }
+        sightings: { type: integer, minimum: 0 }
+        species:
+          type: array
+          description: Species seen in range, most sightings first.
+          items:
+            type: object
+            required: [speciesLabel, sightings]
+            properties:
+              speciesLabel: { type: string }
+              sightings: { type: integer, minimum: 1 }
+        lastSightingAt: { type: [string, 'null'], format: date-time }
+        lastSpeciesLabel:
+          type: [string, 'null']
+          description: Species of the sighting at `lastSightingAt`.
+
+    DailyActivity:
+      type: object
+      required: [tz, buckets]
+      properties:
+        tz: { type: string, examples: [Europe/Warsaw] }
+        buckets:
+          type: array
+          items:
+            type: object
+            required: [date, sightings]
+            properties:
+              date: { type: string, format: date, examples: ['2026-11-19'] }
+              sightings: { type: integer, minimum: 0 }
+
+    HourlyActivity:
+      type: object
+      required: [tz, buckets]
+      properties:
+        tz: { type: string, examples: [Europe/Warsaw] }
+        buckets:
+          type: array
+          minItems: 24
+          maxItems: 24
+          items:
+            type: object
+            required: [hour, sightings]
+            properties:
+              hour: { type: integer, minimum: 0, maximum: 23 }
+              sightings: { type: integer, minimum: 0 }
+
+    # ----------------------------------------------------------- sensors
+    Sensor:
+      type: object
+      required: [id, deviceId, name, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        deviceId:
+          {
+            type: string,
+            description: Stable hardware identifier; not a secret.,
+          }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    SensorPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/Sensor' }
+
+    SensorStatus:
+      type: string
+      enum: [online, attention, offline, unknown]
+      description: |
+        Derived by the server.
+        - `unknown`: the sensor has never sent a heartbeat. This is the state
+          of every sensor until the firmware sends heartbeats.
+        - `offline`: no heartbeat for 30 minutes.
+        - `attention`: battery below 20 % or RSSI below −85 dBm.
+        - `online`: otherwise.
+
+    SensorAlert:
+      type: object
+      required: [code, since]
+      properties:
+        code:
+          type: string
+          enum:
+            [
+              NO_HEARTBEAT,
+              LOW_BATTERY,
+              WEAK_SIGNAL,
+              LOW_STORAGE,
+              UPLOAD_RETRIES,
+            ]
+          description: The frontend turns codes into prose, using the latest heartbeat for numbers.
+        since: { type: string, format: date-time }
+
+    SensorHealth:
+      type: object
+      required:
+        [sensor, deployment, status, alerts, lastHeartbeat, capturesToday]
+      properties:
+        sensor: { $ref: '#/components/schemas/Sensor' }
+        deployment:
+          description: The sensor's latest deployment, or `null` if it has none.
+          oneOf:
+            - $ref: '#/components/schemas/Deployment'
+            - type: 'null'
+        status: { $ref: '#/components/schemas/SensorStatus' }
+        alerts:
+          type: array
+          items: { $ref: '#/components/schemas/SensorAlert' }
+        lastHeartbeat:
+          oneOf:
+            - $ref: '#/components/schemas/Heartbeat'
+            - type: 'null'
+        capturesToday:
+          type: integer
+          minimum: 0
+          description: Detections since local midnight (Europe/Warsaw), all statuses.
+
+    SensorHealthDetail:
+      allOf:
+        - $ref: '#/components/schemas/SensorHealth'
+        - type: object
+          required: [batterySeries]
+          properties:
+            batterySeries:
+              description: Hourly battery percentage for the last 24 h, oldest first. `null` for hours without a heartbeat.
+              type: array
+              minItems: 25
+              maxItems: 25
+              items: { type: [number, 'null'], minimum: 0, maximum: 100 }
+
+    Heartbeat:
+      type: object
+      required:
+        [
+          receivedAt,
+          batteryPercent,
+          batteryVoltage,
+          rssi,
+          firmwareVersion,
+          temperatureC,
+          storageUsedPercent,
+          uptimeSeconds,
+          powerSource,
+          uploadRetries24h,
+        ]
+      properties:
+        receivedAt: { type: string, format: date-time }
+        batteryPercent: { type: number, minimum: 0, maximum: 100 }
+        batteryVoltage: { type: number, examples: [3.71] }
+        rssi: { type: [integer, 'null'], description: Wi-Fi signal in dBm. }
+        firmwareVersion: { type: string, examples: [2.4.1] }
+        temperatureC: { type: [number, 'null'] }
+        storageUsedPercent:
+          {
+            type: [number, 'null'],
+            minimum: 0,
+            maximum: 100,
+            description: SD card buffer use.,
+          }
+        uptimeSeconds: { type: integer, minimum: 0 }
+        powerSource: { type: string, enum: [battery, solar] }
+        uploadRetries24h: { type: integer, minimum: 0 }
+
+    CreateHeartbeatRequest:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          deviceId,
+          sentAt,
+          batteryPercent,
+          batteryVoltage,
+          firmwareVersion,
+          uptimeSeconds,
+          powerSource,
+        ]
+      properties:
+        deviceId: { type: string, minLength: 1 }
+        sentAt: { type: string, format: date-time }
+        batteryPercent: { type: number, minimum: 0, maximum: 100 }
+        batteryVoltage: { type: number, minimum: 0 }
+        rssi: { type: [integer, 'null'] }
+        firmwareVersion: { type: string, minLength: 1 }
+        temperatureC: { type: [number, 'null'] }
+        storageUsedPercent: { type: [number, 'null'], minimum: 0, maximum: 100 }
+        uptimeSeconds: { type: integer, minimum: 0 }
+        powerSource: { type: string, enum: [battery, solar] }
+        uploadRetries24h: { type: integer, minimum: 0, default: 0 }
+
+    CreateSensorRequest:
+      type: object
+      additionalProperties: false
+      required: [deviceId, name]
+      properties:
+        deviceId: { type: string, minLength: 1 }
+        name: { type: string, minLength: 2 }
+
+    # ------------------------------------------------------- deployments
+    Deployment:
+      type: object
+      required:
+        [
+          id,
+          sensorId,
+          name,
+          parkName,
+          latitude,
+          longitude,
+          installedAt,
+          createdAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        sensorId: { type: string, format: uuid }
+        name: { type: string }
+        parkName: { type: string }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        installedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    DeploymentPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/Deployment' }
+
+    CreateDeploymentRequest:
+      type: object
+      additionalProperties: false
+      required: [sensorId, name, parkName, latitude, longitude, installedAt]
+      properties:
+        sensorId: { type: string, format: uuid }
+        name: { type: string, minLength: 2 }
+        parkName: { type: string, minLength: 2 }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        installedAt: { type: string, format: date-time }
+
+    # ---------------------------------------------------------- captures
+    CaptureAccepted:
+      type: object
+      required: [eventId, status]
+      properties:
+        eventId: { type: string, format: uuid }
+        status: { const: QUEUED }
+
+    # ------------------------------------------------------------ system
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+
+    QueueStatus:
+      type: object
+      required: [name, messagesReady, consumers, prefetchCount]
+      properties:
+        name: { type: string, examples: [captures.raw] }
+        messagesReady: { type: integer, minimum: 0 }
+        consumers: { type: integer, minimum: 0 }
+        prefetchCount: { type: [integer, 'null'] }
+
+    PipelineStatus:
+      type: object
+      required:
+        [
+          generatedAt,
+          components,
+          queues,
+          hourlyClassified,
+          inferenceLatency,
+          ingestLatencyP95Ms,
+          objectStorageBytes,
+          modelVersion,
+        ]
+      properties:
+        generatedAt: { type: string, format: date-time }
+        components:
+          type: object
+          required: [database, broker, objectStorage]
+          properties:
+            database: { type: string, enum: [up, down] }
+            broker: { type: string, enum: [up, down] }
+            objectStorage: { type: string, enum: [up, down] }
+        queues:
+          description: '`captures.raw`, `detections.classified` and `captures.dlq`.'
+          type: array
+          items: { $ref: '#/components/schemas/QueueStatus' }
+        hourlyClassified:
+          description: Detections stored per hour for the last 24 h, oldest first; the last bucket is the current, partial hour.
+          type: array
+          minItems: 24
+          maxItems: 24
+          items: { type: integer, minimum: 0 }
+        inferenceLatency:
+          description: '`classifiedAt − capturedAt` over the last 24 h, in seconds.'
+          type: object
+          required: [p50, p95, samples]
+          properties:
+            p50: { type: [number, 'null'] }
+            p95: { type: [number, 'null'] }
+            samples: { type: integer, minimum: 0 }
+        ingestLatencyP95Ms:
+          type: [number, 'null']
+          description: p95 response time of `POST /captures` over the last 24 h.
+        objectStorageBytes: { type: [integer, 'null'] }
+        modelVersion:
+          type: [string, 'null']
+          description: '`modelVersion` of the most recent detection.'
+
+    DeadLetter:
+      type: object
+      required: [id, deadLetteredAt, eventId, deviceId, reason, attempts]
+      properties:
+        id: { type: string, format: uuid }
+        deadLetteredAt: { type: string, format: date-time }
+        eventId:
+          {
+            type: [string, 'null'],
+            format: uuid,
+            description: '`null` when the payload was unreadable.',
+          }
+        deviceId: { type: [string, 'null'] }
+        reason:
+          { type: string, examples: [imageKey not found in object storage] }
+        attempts: { type: integer, minimum: 1 }
+
+    DeadLetterPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/DeadLetter' }
